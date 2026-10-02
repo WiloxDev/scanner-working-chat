@@ -1,0 +1,15 @@
+{
+  "username": "Wilox",
+  "userIcon": "󰣇",
+  "flowerIcon": "✿",
+  "showContextInIdle": true,
+  "enableComet": true,
+  "cometSpeedMs": 80,
+  "contextAlertThreshold": 90,
+  "theme": {
+    "borderColor": "#5CB8C7",
+    "userNameColor": "#7BC88F",
+    "flowerColor": "#5CB8C7",
+    "separatorColor": "#8A4E9E"
+  }
+}

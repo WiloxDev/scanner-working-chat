@@ -1,0 +1,46 @@
+{
+  "name": "scanner-working-chat",
+  "version": "1.0.0",
+  "description": "Dynamic kinetic prompt & real-time context engine for Gentle-Pi and Gentle-Shell",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/**/*.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "pi-extension",
+    "gentle-pi",
+    "gentle-shell",
+    "prompt-editor",
+    "terminal-ui",
+    "context-gauge"
+  ],
+  "author": "WiloxDev (wilsonlavio9@gmail.com)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WiloxDev/scanner-working-chat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WiloxDev/scanner-working-chat/issues"
+  },
+  "homepage": "https://github.com/WiloxDev/scanner-working-chat#readme",
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.87.1",
+    "@earendil-works/pi-tui": "^0.87.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "pi": {
+    "extensions": [
+      "dist/index.js"
+    ]
+  }
+}

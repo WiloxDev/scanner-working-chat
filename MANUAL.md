@@ -100,6 +100,23 @@ Si ya tienes instalado un tema global en Pi (como temas de terceros o paquetes d
 
 ---
 
+## 🤖 ¿Le pides a un Agente de IA que lo instale por ti? (Prompt Rápido)
+
+Si tú, tu amigo o un cliente quieren que un agente de IA (Pi Coding Agent, Claude, Cursor, Copilot, etc.) haga la instalación automáticamente, solo deben copiar y pegar este prompt directo:
+
+```text
+Instala en mi Pi la extensión scanner-working-chat ejecutando:
+curl -fsSL https://raw.githubusercontent.com/WiloxDev/scanner-working-chat/main/install.sh | bash
+y avísame cuando termines para hacer /reload. No toques mi tema principal.
+```
+
+El instalador `install.sh` se encarga en segundo plano de:
+1. Detectar si tu entorno es Gentle-Pi (`~/.pi/agent/extensions`) o Gentle-Shell (`~/.pi/agent-j0k3r/extensions`).
+2. Descargar, compilar y preservar intacto tu tema principal (footers, headers y widgets del sidebar).
+3. Generar tu archivo `~/.scanner-chatrc.json` con tu usuario actual.
+
+---
+
 ## 🔄 Aplicar Cambios
 
 Una vez guardado el archivo `~/.scanner-chatrc.json`, simplemente ejecuta dentro de tu sesión activa de Pi:

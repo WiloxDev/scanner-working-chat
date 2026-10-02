@@ -88,13 +88,17 @@ npm run typecheck
 
 ---
 
-## 🤖 Guía de Instalación para Agentes de IA
+## 🤖 Prompt Rápido para que una IA lo Instale
 
-Si estás utilizando una IA (como otro agente de Pi, Claude, Cursor o Copilot) para instalar esta extensión en tu máquina, indícale que lea el archivo:
+Si le pides a cualquier agente de IA (Pi Coding Agent, Claude, Cursor, Copilot, etc.) que haga la instalación por ti, solo cópiale este mensaje:
 
-👉 **[`AI_INSTALL.md`](./AI_INSTALL.md)**
+```text
+Instala en mi Pi la extensión scanner-working-chat ejecutando:
+curl -fsSL https://raw.githubusercontent.com/WiloxDev/scanner-working-chat/main/install.sh | bash
+y avísame cuando termines para hacer /reload. No toques mi tema principal.
+```
 
-Allí encontrará el protocolo determinista de detección de rutas (`Gentle-Pi` vs `Gentle-Shell`), prevención de conflictos con temas principales existentes y verificación TDD automatizada.
+*(Para detalles técnicos del protocolo de IA, consulta [`AI_INSTALL.md`](./AI_INSTALL.md)).*
 
 ---
 

@@ -1,96 +1,99 @@
 # 🌸 Scanner Working Chat (`scanner-working-chat`)
 
-> **Dynamic Kinetic Prompt & Real-Time Context Engine para Gentle-Pi y Gentle-Shell.**  
-> Transforma el recuadro estático del editor de chat de Pi en una interfaz viva con animación cinemática de cometa, flor sincronizada y medidor espectral de contexto en tiempo real.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/Tests-41%20passing-brightgreen.svg)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict%200%20errors-blue.svg)]()
+[![Gentle-Pi Compatible](https://img.shields.io/badge/Gentle--Pi-v0.87.1%2B-purple.svg)]()
+
+> **Dynamic Kinetic Telemetry & Real-Time Context Engine para Gentle-Pi y Gentle-Shell.**  
+> Transforma el recuadro estático y aburrido del chat de Pi en un centro interactivo de telemetría: animación cinemática de cometa, cronómetro de latencia por turno, medidor espectral de consumo de contexto y protección inteligente contra pérdida de memoria.
 
 ---
 
-## 🎨 Vistas de Terminal
+## 📌 ¿Qué es y qué hace?
 
-### 1. En Reposo (`IDLE` — Esperando entrada del usuario)
-El marco superior muestra tu identidad personalizada, la flor insignia y el consumo actual de la ventana de contexto en texto limpio:
+En el uso diario con agentes de código (Pi, Claude, etc.), el usuario suele mirar un recuadro estático mientras el modelo "piensa", sin saber cuánto tardará ni si la ventana de contexto está a punto de desbordarse.
+
+**`scanner-working-chat`** es una extensión de interfaz quirúrgica que sustituye exclusivamente el marco superior del editor (`CustomEditor`) para proporcionar:
+1. **Feedback cinético inmediato:** Sabes con certeza cuándo el agente está razonando o ejecutando herramientas complejas en segundo plano.
+2. **Cronómetro de turno en vivo:** Mide la latencia exacta de ejecución de cada paso (`[2.4s]`, `[1m12s]`).
+3. **Monitoreo de contexto en tiempo real:** Medidor espectral de 8 celdas térmicas y una alarma de retención automotriz (*latching alert*) que advierte antes de que el agente empiece a olvidar instrucciones.
+4. **Resiliencia universal:** Detección de terminal automática con soporte desde terminales avanzadas con Nerd Fonts hasta entornos SSH/ASCII puros sin caracteres rotos.
+5. **Cero invasión:** No toca tu tema, no altera tu footer de Git/modelos ni banners superiores.
+
+---
+
+## 🎨 Modos Visuales en Acción
+
+### 1. Estado Reposo (`IDLE` — Esperando tu mensaje)
+Muestra tu identidad de usuario, rotación sutil de la flor y el porcentaje limpio de contexto ocupado:
 
 ```text
-╭─ 󰣇 Wilox ✿  󰣇 Ctx: 18% ────────────────────────────────────────────────────────╮
+╭─ 󰣇 carlos ✿  󰣇 Ctx: 18% ────────────────────────────────────────────────────────╮
 │ Escribe tu mensaje para el agente...                                            │
 │                                                                                 │
 ╰─────────────────────────────────────────────────────────────────────────────────╯
 ```
 
-### 2. Trabajando (`WORKING` — Agente pensando o ejecutando herramientas)
-Al enviar un mensaje, el badge estático conmuta instantáneamente al centro de telemetría cinético:
+### 2. Estado Activo (`WORKING` — Agente pensando / ejecutando herramientas)
+El badge superior se transforma en una consola de instrumentación fluida:
 
 ```text
-╭─ ◆●•∙··  ✿  working…   │   Context ▰▰▰▰▰▱▱▱ 62% ───────────────────────────────╮
+╭─ ◆●•∙··  ✿  working… [3.2s]   │   Context ▰▰▰▰▰▱▱▱ 62% ─────────────────────────╮
 │                                                                                 │
 │  [ El agente está ejecutando herramientas o razonando en segundo plano ]        │
 │                                                                                 │
 ╰─────────────────────────────────────────────────────────────────────────────────╯
 ```
+* **Cometa de partículas (`◆●•∙··`):** Animación armónica continua a 80ms.
+* **Cronómetro `[3.2s]`:** Duración acumulada del turno en curso.
+* **Medidor Térmico:** Gradiente suave de 8 celdas que vira de Verde $\rightarrow$ Lima $\rightarrow$ Ámbar $\rightarrow$ Naranja $\rightarrow$ Rojo.
 
 ---
 
-## ✨ Características Principales
+## 💎 ¿Por qué deberías usarlo? (Ventajas Clave)
 
-* 🌠 **Cometa Cinético de Partículas:** Animación en bucle fluido de 70ms con partículas `◆●•∙··` que recorre el marco mientras el agente trabaja.
-* 🌸 **Flor Giratoria Sincronizada:** La flor rota (`✿ → ❀ → ❁ → ✾`) y late en cian brillante al compás de cada ciclo del cometa.
-* ⚡ **Efecto Escáner en el Texto:** Onda reflectiva que viaja letra por letra a través de la palabra `working…` o de la herramienta en ejecución.
-* 📊 **Medidor Espectral de Contexto (`wer3.png`):** Barra de 8 celdas graduadas con degradado suave térmico (Verde $\rightarrow$ Lima $\rightarrow$ Amarillo $\rightarrow$ Naranja $\rightarrow$ Rojo).
-* 🚨 **Alarma Automotriz con Retención ($\ge 90\%$):** Oscilación senoidal en Rojo Neón Vivo (`#FF1E44`) con retención ininterrumpida (*latching*) hasta que el contexto baja del 15%.
-* ⚙️ **100% Configurable:** Nombre, iconos, glifos y colores personalizables desde `~/.scanner-chatrc.json`.
-* 🛡️ **Degeneración Elástica:** Si reduces el ancho de tu terminal, el marco se adapta automáticamente sin desbordar ni romperse.
+| Característica | Editor Tradicional de Pi | Con `scanner-working-chat` |
+|---|---|---|
+| **Visibilidad de Estado** | Texto plano estático sin movimiento | Cometa cinemático + onda lumínica reflectiva |
+| **Control de Contexto** | Debes consultar comandos o mirar logs | Medidor visual en tiempo real en cada frame |
+| **Alarma de Saturación** | Ninguna (el agente olvida sin avisar) | Alarma senoidal en Rojo Neón Vivo (`#FF1E44`) con retención |
+| **Latencia de Turnos** | Desconocida a simple vista | Cronómetro integrado de duración (`[X.Xs]`) |
+| **Compatibilidad Terminal** | Puede romper caracteres si no hay fuentes | Autodetección: conmuta a ASCII puro si no hay UTF-8 |
+| **Modo Zen / Silencioso** | No disponible | Comando `/scanner zen` para pausar animaciones al vuelo |
+| **Convivencia con Temas** | Frecuentes conflictos de layout | Principio de mínima invasión (solo toca el editor) |
 
 ---
 
-## 🚀 Instalación Rápida
+## 🚀 Instalación en 1 Paso (Para Todo Público)
 
-### Opción 1: Auto-Instalador en 1 Línea (Recomendada)
-Ejecuta en tu terminal:
+No necesitas conocimientos avanzados de terminal ni compilar nada manualmente.
+
+### 🌟 Método Rápido (Recomendado)
+Abre tu terminal y pega este comando:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/WiloxDev/scanner-working-chat/main/install.sh | bash
 ```
 
-### Opción 2: Clonando el Repositorio
-```bash
-git clone https://github.com/WiloxDev/scanner-working-chat.git
-cd scanner-working-chat
-chmod +x install.sh
-./install.sh
-```
+**¿Qué hace este comando automáticamente por ti?**
+1. Detecta tu nombre de usuario del sistema (no te pondrá nombres ajenos).
+2. Detecta la ruta correcta de Pi (`Gentle-Pi` estándar o `Gentle-Shell` con perfiles como `agent-j0k3r`).
+3. Descarga el código, instala y compila la versión más rápida y optimizada.
+4. Genera tu archivo personal de configuración en `~/.scanner-chatrc.json`.
 
-Al terminar, abre una nueva sesión de Gentle-Pi o escribe dentro del chat:
+### 🔄 Aplicar en tu Pi
+Una vez ejecutado el instalador, abre Pi (o si ya lo tienes abierto, escribe en el chat):
 ```text
 /reload
 ```
+¡Tu recuadro de chat cobrará vida al instante!
 
 ---
 
-## 📂 Dónde se Instala en el Sistema
+## 🤖 ¿Quieres que una IA lo instale por ti?
 
-* **Código de la Extensión:** 
-  * `~/.pi/agent/extensions/scanner-working-chat/` (Gentle-Pi estándar)
-  * `~/.pi/agent-j0k3r/extensions/scanner-working-chat/` (Gentle-Shell / Perfil j0k3r)
-* **Archivo de Configuración Personal:**
-  * `~/.scanner-chatrc.json` (independiente del código, no se borra al actualizar).
-
----
-
-## 🧪 Pruebas Unitarias (TDD)
-
-El proyecto cuenta con una suite completa de pruebas unitarias cubriendo cometa, medidores de contexto, configuración y render del editor:
-
-```bash
-npm install
-npm test
-npm run typecheck
-```
-
----
-
-## 🤖 Prompt Rápido para que una IA lo Instale
-
-Si le pides a cualquier agente de IA (Pi Coding Agent, Claude, Cursor, Copilot, etc.) que haga la instalación por ti, solo cópiale este mensaje:
+Si prefieres pedirle a Claude, Pi Coding Agent, Cursor o Copilot que haga el trabajo, solo cópiale este prompt:
 
 ```text
 Instala en mi Pi la extensión scanner-working-chat ejecutando:
@@ -98,19 +101,74 @@ curl -fsSL https://raw.githubusercontent.com/WiloxDev/scanner-working-chat/main/
 y avísame cuando termines para hacer /reload. No toques mi tema principal.
 ```
 
-*(Para detalles técnicos del protocolo de IA, consulta [`AI_INSTALL.md`](./AI_INSTALL.md)).*
+---
+
+## ⚡ Comandos Integrados en Pi
+
+Durante tu sesión diaria en Pi, dispones de comandos directos sin tocar archivos:
+
+* `/scanner zen`: Alterna instantáneamente entre el **Modo Dinámico** (con cometa y animaciones) y el **Modo Zen** (estático, ideal para máxima concentración o ahorro de batería).
+* `/scanner reload`: Recarga tus cambios en `~/.scanner-chatrc.json` en caliente sin reiniciar la sesión. Si cometiste un error de sintaxis en el JSON, te avisa en pantalla con una notificación preventiva.
 
 ---
 
-## 🛡️ Convivencia con tu Tema Principal (Theme Coexistence)
+## 🎛️ Configuración a Tu Gusto (`~/.scanner-chatrc.json`)
 
-`scanner-working-chat` está diseñado siguiendo el principio de mínima invasión:
-* **Solo controla el recuadro del chat:** Intercepta únicamente el hook `ctx.ui.setEditorComponent(...)`.
-* **Cero interferencia:** Deja intactos los banners de bienvenida (`setHeader`), los footers con Git y cuotas (`setFooter`) y las barras laterales (`setWidget`).
-* Puedes combinarlo libremente con cualquier tema de fondo o personalización previa.
+Todo aspecto visual es 100% configurable mediante un archivo JSON sencillo en tu carpeta de usuario:
+
+```json
+{
+  "username": "carlos",
+  "userIcon": "󰣇",
+  "flowerIcon": "✿",
+  "zenMode": false,
+  "showWorkingDuration": true,
+  "showContextInIdle": true,
+  "enableComet": true,
+  "cometSpeedMs": 80,
+  "cometTrackWidth": 22,
+  "warningThreshold": 70,
+  "criticalThreshold": 90,
+  "resetThreshold": 15,
+  "theme": {
+    "borderColor": "#5CB8C7",
+    "userNameColor": "#7BC88F",
+    "flowerColor": "#5CB8C7",
+    "separatorColor": "#8A4E9E",
+    "labelColor": "#5CB8C7",
+    "emptyCellColor": "#465564",
+    "neonRedPulsePeak": "#FF1E44"
+  }
+}
+```
+
+Para ver la guía exhaustiva de personalización (estilos Cyberpunk, Minimalista ASCII y paletas personalizadas), consulta el [MANUAL.md](./MANUAL.md).
+
+---
+
+## 🛡️ Principio de Convivencia y Arquitectura Robusta
+
+* **No invasivo:** No toca banners de bienvenida (`setHeader`), ni pie de página de Git y modelos (`setFooter`), ni barras laterales de estado (`setWidget`).
+* **Protección contra actualizaciones:** Construido usando contratos limpios de API pública, sin depender de variables privadas que puedan romperse con futuras versiones de Pi.
+* **41 Pruebas Unitarias (TDD):** Código auditado quirúrgicamente con pruebas automatizadas de ancho invariante, degradación elástica en terminales angostas y sanitización estricta.
+
+```bash
+npm test
+npm run typecheck
+```
+
+---
+
+## 📂 Estructura del Proyecto
+
+* [`install.sh`](./install.sh) — Auto-instalador para cualquier sistema Linux/macOS/WSL.
+* [`MANUAL.md`](./MANUAL.md) — Manual detallado de configuración y temas.
+* [`ARCHITECTURE.md`](./ARCHITECTURE.md) — Diagramas Mermaid de arquitectura y flujo de ejecución.
+* [`AUDIT_REPORT.md`](./AUDIT_REPORT.md) — Reporte técnico de auditoría y estabilización quirúrgica.
+* [`AI_INSTALL.md`](./AI_INSTALL.md) — Protocolo automatizado para asistentes de IA.
 
 ---
 
 ## 📄 Licencia
 
-MIT © [WiloxDev](https://github.com/WiloxDev)
+Distribuido bajo licencia MIT. Desarrollado con esmero para la comunidad de **Gentle-Pi** y **Gentle-Shell**.

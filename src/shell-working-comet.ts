@@ -2,18 +2,25 @@ import { visibleWidth } from "@earendil-works/pi-tui";
 
 export type Rgb = readonly [number, number, number];
 
-export const COMET_GLYPHS = ["◆", "●", "•", "∙", "·"] as const;
+export interface CometConfig {
+	glyphs: readonly string[];
+	colors: readonly Rgb[];
+	trackWidth: number;
+	frameMs: number;
+}
 
-export const COMET_COLORS: readonly Rgb[] = [
-	[92, 184, 199], // ◆ #5CB8C7 Pastel Cyan
-	[78, 160, 178], // ● Pastel Soft Cyan
-	[64, 135, 155], // • Pastel Ocean
-	[48, 105, 125], // ∙ Pastel Slate
-	[32, 75, 95],   // · Midnight Pastel
-];
-
-export const DEFAULT_COMET_TRACK_WIDTH = 10;
-export const DEFAULT_COMET_FRAME_MS = 70;
+export const DEFAULT_COMET_CONFIG: CometConfig = {
+	glyphs: ["◆", "●", "•", "∙", "·"] as const,
+	colors: [
+		[92, 184, 199], // ◆ #5CB8C7 Pastel Cyan
+		[78, 160, 178], // ● Pastel Soft Cyan
+		[64, 135, 155], // • Pastel Ocean
+		[48, 105, 125], // ∙ Pastel Slate
+		[32, 75, 95],   // · Midnight Pastel
+	] as const,
+	trackWidth: 10,
+	frameMs: 70,
+};
 
 const RESET_FG = "\x1b[39m";
 
@@ -28,21 +35,25 @@ export interface WorkingCometRenderOptions {
 	tick: number;
 	width?: number;
 	color?: boolean;
+	config?: Partial<CometConfig>;
 }
 
 export function renderWorkingComet({
 	tick,
-	width = DEFAULT_COMET_TRACK_WIDTH,
+	width = DEFAULT_COMET_CONFIG.trackWidth,
 	color = true,
+	config = {},
 }: WorkingCometRenderOptions): string {
-	const trackWidth = Math.max(0, Math.floor(width));
+	const glyphs = config.glyphs ?? DEFAULT_COMET_CONFIG.glyphs;
+	const colors = config.colors ?? DEFAULT_COMET_CONFIG.colors;
+	const trackWidth = Math.max(0, Math.floor(width ?? config.trackWidth ?? DEFAULT_COMET_CONFIG.trackWidth));
 
 	if (trackWidth === 0) {
 		return "";
 	}
 
 	const cells = Array<string>(trackWidth).fill(" ");
-	const cometLength = COMET_GLYPHS.length;
+	const cometLength = glyphs.length;
 	const cycleLength = trackWidth + cometLength;
 	const phase = ((tick % cycleLength) + cycleLength) % cycleLength;
 
@@ -56,8 +67,8 @@ export function renderWorkingComet({
 			continue;
 		}
 		cells[x] = ansiRgb(
-			COMET_GLYPHS[tailIndex],
-			COMET_COLORS[tailIndex],
+			glyphs[tailIndex],
+			colors[tailIndex],
 			color,
 		);
 	}

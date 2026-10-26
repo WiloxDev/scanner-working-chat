@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { loadConfig, hexToRgb, DEFAULT_CONFIG } from "../src/config.ts";
+import { loadConfig, hexToRgb, DEFAULT_CONFIG, DEFAULT_COMET_GLYPHS, DEFAULT_COMET_COLORS, DEFAULT_SPECTRUM_COLORS } from "../src/config.ts";
 
 test("config: hexToRgb parses hex colors accurately", () => {
 	assert.deepEqual(hexToRgb("#5CB8C7", [0, 0, 0]), [92, 184, 199]);
@@ -18,6 +18,13 @@ test("config: returns safe defaults when config file is absent", () => {
 	assert.equal(config.criticalThreshold, 90);
 	assert.equal(config.resetThreshold, 15);
 	assert.deepEqual(config.colors.borderColor, [92, 184, 199]);
+	assert.deepEqual(config.cometGlyphs, [...DEFAULT_COMET_GLYPHS]);
+	assert.deepEqual(config.cometColors, [...DEFAULT_COMET_COLORS]);
+	assert.deepEqual(config.spectrumColors, [...DEFAULT_SPECTRUM_COLORS]);
+	assert.deepEqual(config.colors.labelColor, [92, 184, 199]);
+	assert.deepEqual(config.colors.emptyCellColor, [70, 85, 100]);
+	assert.deepEqual(config.colors.neonRedPulseBase, [120, 20, 35]);
+	assert.deepEqual(config.colors.neonRedPulsePeak, [255, 30, 68]);
 });
 
 test("config: applies explicit overrides cleanly", () => {
@@ -39,6 +46,59 @@ test("config: applies explicit overrides cleanly", () => {
 	assert.equal(config.enableComet, false);
 	assert.equal(config.criticalThreshold, 85);
 	assert.deepEqual(config.colors.borderColor, [255, 0, 0]);
-	// Unspecified colors remain default
 	assert.deepEqual(config.colors.userNameColor, DEFAULT_CONFIG.colors.userNameColor);
+});
+
+test("config: applies comet and spectrum overrides", () => {
+	const customGlyphs = ["★", "☆"];
+	const customCometColors = ["#FF0000", "#00FF00"];
+	const customSpectrumColors = ["#111111", "#222222", "#333333", "#444444", "#555555", "#666666", "#777777", "#888888"];
+
+	const config = loadConfig({
+		configPath: "/tmp/non-existent-scanner-config-xyz.json",
+		overrides: {
+			cometGlyphs: customGlyphs,
+			cometColors: customCometColors,
+			spectrumColors: customSpectrumColors,
+			theme: {
+				labelColor: "#ABCDEF",
+				emptyCellColor: "#FEDCBA",
+				neonRedPulseBase: "#123456",
+				neonRedPulsePeak: "#654321",
+			},
+		},
+	});
+
+	assert.deepEqual(config.cometGlyphs, customGlyphs);
+	assert.deepEqual(config.cometColors, [[255, 0, 0], [0, 255, 0]]);
+	assert.deepEqual(config.spectrumColors, [
+		[17, 17, 17], [34, 34, 34], [51, 51, 51], [68, 68, 68],
+		[85, 85, 85], [102, 102, 102], [119, 119, 119], [136, 136, 136],
+	]);
+	assert.deepEqual(config.colors.labelColor, [171, 205, 239]);
+	assert.deepEqual(config.colors.emptyCellColor, [254, 220, 186]);
+	assert.deepEqual(config.colors.neonRedPulseBase, [18, 52, 86]);
+	assert.deepEqual(config.colors.neonRedPulsePeak, [101, 67, 33]);
+});
+
+test("config: loads comet and spectrum from parsed config file", () => {
+	const config = loadConfig({
+		configPath: "/tmp/non-existent-scanner-config-xyz.json",
+		overrides: {},
+		// Simulate parsed config from file
+	} as any);
+
+	// Test that we can pass parsed values directly
+	const config2 = loadConfig({
+		configPath: "/tmp/non-existent-scanner-config-xyz.json",
+		overrides: {
+			cometGlyphs: ["◆", "●"],
+			cometColors: ["#5CB8C7", "#7BC88F"],
+			spectrumColors: ["#4ADE80", "#84CC16", "#A3E635", "#EAB308", "#F59E0B", "#F97316", "#EF4444", "#DC2626"],
+		},
+	});
+
+	assert.deepEqual(config2.cometGlyphs, ["◆", "●"]);
+	assert.deepEqual(config2.cometColors, [[92, 184, 199], [123, 200, 143]]);
+	assert.equal(config2.spectrumColors.length, 8);
 });

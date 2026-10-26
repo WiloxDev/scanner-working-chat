@@ -71,12 +71,25 @@ cat << EOF > "$HOME/.scanner-chatrc.json"
   "showContextInIdle": true,
   "enableComet": true,
   "cometSpeedMs": 80,
-  "contextAlertThreshold": 90,
+  "cometTrackWidth": 22,
+  "cometGlyphs": ["◆", "●", "•", "∙", "·"],
+  "cometColors": ["#5CB8C7", "#4EA0B2", "#40879B", "#30697D", "#204B5F"],
+  "warningThreshold": 70,
+  "criticalThreshold": 90,
+  "resetThreshold": 15,
+  "spectrumColors": [
+    "#4ADE80", "#84CC16", "#A3E635", "#EAB308",
+    "#F59E0B", "#F97316", "#EF4444", "#DC2626"
+  ],
   "theme": {
     "borderColor": "#5CB8C7",
     "userNameColor": "#7BC88F",
     "flowerColor": "#5CB8C7",
-    "separatorColor": "#8A4E9E"
+    "separatorColor": "#8A4E9E",
+    "labelColor": "#5CB8C7",
+    "emptyCellColor": "#465564",
+    "neonRedPulseBase": "#781423",
+    "neonRedPulsePeak": "#FF1E44"
   }
 }
 EOF
@@ -87,7 +100,7 @@ Ejecuta la suite de pruebas para certificar que el entorno de terminal es compat
 ```bash
 npm test
 ```
-*(Todas las 14 pruebas deben reportar `pass`)*.
+*(Todas las 35 pruebas deben reportar `pass`)*.
 
 ### Paso 5: Instrucción de Cierre
 Indica al usuario que ejecute `/reload` en su sesión de Pi para disfrutar de la nueva interfaz interactiva.

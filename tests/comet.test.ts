@@ -4,7 +4,7 @@ import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import {
 	renderWorkingComet,
 	isWorkingCometEnabled,
-	COMET_GLYPHS,
+	DEFAULT_COMET_CONFIG,
 } from "../src/shell-working-comet.ts";
 
 test("comet: invariant of exact visible track width across multiple ticks", () => {
@@ -24,15 +24,35 @@ test("comet: invariant of exact visible track width across multiple ticks", () =
 test("comet: glyphs cycle properly and contain comet particles", () => {
 	let foundHead = false;
 	const trackWidth = 10;
-	// Cycle through trackWidth + COMET_GLYPHS.length ticks
-	for (let tick = 0; tick < trackWidth + COMET_GLYPHS.length; tick++) {
+	const glyphs = DEFAULT_COMET_CONFIG.glyphs;
+	const headGlyph = glyphs[0];
+	// Cycle through trackWidth + glyphs.length ticks
+	for (let tick = 0; tick < trackWidth + glyphs.length; tick++) {
 		const raw = stripTerminalSequences(renderWorkingComet({ tick, width: trackWidth, color: false }));
-		if (raw.includes("◆")) {
+		if (raw.includes(headGlyph)) {
 			foundHead = true;
 			break;
 		}
 	}
-	assert.ok(foundHead, "Comet should render head glyph ◆ during its cycle");
+	assert.ok(foundHead, `Comet should render head glyph ${headGlyph} during its cycle`);
+});
+
+test("comet: custom glyphs and colors are respected", () => {
+	const customGlyphs = ["★", "☆", "✦"];
+	const customColors = [
+		[255, 0, 0],
+		[0, 255, 0],
+		[0, 0, 255],
+	] as const;
+	const rendered = renderWorkingComet({
+		tick: 0,
+		width: 10,
+		color: false,
+		config: { glyphs: customGlyphs, colors: customColors },
+	});
+	const raw = stripTerminalSequences(rendered);
+	assert.ok(raw.includes("★"), "Custom head glyph should be rendered");
+	assert.equal(visibleWidth(rendered), 10, "Track width must match with custom config");
 });
 
 test("comet: zero width returns empty string", () => {

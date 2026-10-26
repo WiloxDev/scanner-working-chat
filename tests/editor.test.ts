@@ -96,11 +96,12 @@ test("editor: renders top border in WORKING state", () => {
 
 	const editor = new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
 
-	// Simulate active workingStatusIndicator
-	(editor as any).workingStatusIndicator = {
+	// Simulate active workingStatusIndicator via public API
+	editor.setWorkingStatusIndicator({
 		renderInBorder: () => "working…",
-		currentFrame: 3,
-	};
+		renderSpinnerInBorder: () => "",
+		setIndicator: () => {},
+	});
 
 	const top = (editor as any).renderTopBorder(100, 0);
 	const clean = stripTerminalSequences(top);

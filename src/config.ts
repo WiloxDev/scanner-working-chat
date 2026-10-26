@@ -7,6 +7,10 @@ export interface ScannerChatThemeColors {
 	userNameColor: [number, number, number];
 	flowerColor: [number, number, number];
 	separatorColor: [number, number, number];
+	labelColor: [number, number, number];
+	emptyCellColor: [number, number, number];
+	neonRedPulseBase: [number, number, number];
+	neonRedPulsePeak: [number, number, number];
 }
 
 export interface ScannerChatConfig {
@@ -18,9 +22,12 @@ export interface ScannerChatConfig {
 	enableComet: boolean;
 	cometSpeedMs: number;
 	cometTrackWidth: number;
+	cometGlyphs: string[];
+	cometColors: [number, number, number][];
 	warningThreshold: number;
 	criticalThreshold: number;
 	resetThreshold: number;
+	spectrumColors: [number, number, number][];
 	colors: ScannerChatThemeColors;
 }
 
@@ -54,6 +61,31 @@ function resolveDefaultUsername(): string {
 	return process.env.USER || process.env.USERNAME || "Wilox";
 }
 
+export const DEFAULT_COMET_GLYPHS = ["◆", "●", "•", "∙", "·"] as const;
+export const DEFAULT_COMET_COLORS: readonly [number, number, number][] = [
+	[92, 184, 199], // ◆ #5CB8C7 Pastel Cyan
+	[78, 160, 178], // ● Pastel Soft Cyan
+	[64, 135, 155], // • Pastel Ocean
+	[48, 105, 125], // ∙ Pastel Slate
+	[32, 75, 95],   // · Midnight Pastel
+] as const;
+
+export const DEFAULT_SPECTRUM_COLORS: readonly [number, number, number][] = [
+	[74, 222, 128],  // 1: #4ADE80 Verde Esmeralda (0-12%)
+	[132, 204, 22],  // 2: #84CC16 Verde Lima (13-25%)
+	[163, 230, 53],  // 3: #A3E635 Lima Brillante (26-37%)
+	[234, 179, 8],   // 4: #EAB308 Amarillo Cálido (38-50%)
+	[245, 158, 11],  // 5: #F59E0B Ámbar / Oro (51-62%)
+	[249, 115, 22],  // 6: #F97316 Naranja Alerta (63-75%)
+	[239, 68, 68],   // 7: #EF4444 Rojo Alerta (76-87%)
+	[220, 38, 38],   // 8: #DC2626 Rojo Fuego Máximo (88-100%+)
+] as const;
+
+export const DEFAULT_EMPTY_CELL_COLOR: [number, number, number] = [70, 85, 100];
+export const DEFAULT_LABEL_COLOR: [number, number, number] = [92, 184, 199];
+export const DEFAULT_NEON_RED_PULSE_BASE: [number, number, number] = [120, 20, 35];
+export const DEFAULT_NEON_RED_PULSE_PEAK: [number, number, number] = [255, 30, 68];
+
 export const DEFAULT_CONFIG: ScannerChatConfig = {
 	enabled: true,
 	username: resolveDefaultUsername(),
@@ -63,14 +95,21 @@ export const DEFAULT_CONFIG: ScannerChatConfig = {
 	enableComet: true,
 	cometSpeedMs: 80,
 	cometTrackWidth: 22,
+	cometGlyphs: [...DEFAULT_COMET_GLYPHS],
+	cometColors: [...DEFAULT_COMET_COLORS],
 	warningThreshold: 70,
 	criticalThreshold: 90,
 	resetThreshold: 15,
+	spectrumColors: [...DEFAULT_SPECTRUM_COLORS],
 	colors: {
 		borderColor: [92, 184, 199],      // #5CB8C7 Pastel Cyan
 		userNameColor: [123, 200, 143],   // #7BC88F Menta suave
 		flowerColor: [92, 184, 199],     // #5CB8C7
 		separatorColor: [138, 78, 158],   // #8A4E9E Violeta suave
+		labelColor: [92, 184, 199],
+		emptyCellColor: [70, 85, 100],
+		neonRedPulseBase: [120, 20, 35],
+		neonRedPulsePeak: [255, 30, 68],
 	},
 };
 
@@ -82,7 +121,14 @@ export interface LoadConfigOptions {
 			userNameColor?: string;
 			flowerColor?: string;
 			separatorColor?: string;
+			labelColor?: string;
+			emptyCellColor?: string;
+			neonRedPulseBase?: string;
+			neonRedPulsePeak?: string;
 		};
+		cometGlyphs?: string[];
+		cometColors?: string[];
+		spectrumColors?: string[];
 	};
 }
 
@@ -121,6 +167,30 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 	const criticalThreshold = overrides.criticalThreshold ?? parsed.criticalThreshold ?? DEFAULT_CONFIG.criticalThreshold;
 	const resetThreshold = overrides.resetThreshold ?? parsed.resetThreshold ?? DEFAULT_CONFIG.resetThreshold;
 
+	// Parse cometGlyphs from config (array of strings)
+	let cometGlyphs = DEFAULT_CONFIG.cometGlyphs;
+	if (overrides.cometGlyphs) {
+		cometGlyphs = overrides.cometGlyphs;
+	} else if (parsed.cometGlyphs && Array.isArray(parsed.cometGlyphs)) {
+		cometGlyphs = parsed.cometGlyphs;
+	}
+
+	// Parse cometColors from config (array of hex strings -> RGB)
+	let cometColors = DEFAULT_CONFIG.cometColors;
+	if (overrides.cometColors && Array.isArray(overrides.cometColors)) {
+		cometColors = (overrides.cometColors as string[]).map((c) => hexToRgb(c, [0, 0, 0]));
+	} else if (parsed.cometColors && Array.isArray(parsed.cometColors)) {
+		cometColors = (parsed.cometColors as string[]).map((c) => hexToRgb(c, [0, 0, 0]));
+	}
+
+	// Parse spectrumColors from config (array of hex strings -> RGB)
+	let spectrumColors = DEFAULT_CONFIG.spectrumColors;
+	if (overrides.spectrumColors && Array.isArray(overrides.spectrumColors)) {
+		spectrumColors = (overrides.spectrumColors as string[]).map((c) => hexToRgb(c, [0, 0, 0]));
+	} else if (parsed.spectrumColors && Array.isArray(parsed.spectrumColors)) {
+		spectrumColors = (parsed.spectrumColors as string[]).map((c) => hexToRgb(c, [0, 0, 0]));
+	}
+
 	const themeData = overrides.theme || parsed.theme || {};
 	const colors: ScannerChatThemeColors = {
 		borderColor: themeData.borderColor
@@ -135,6 +205,18 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 		separatorColor: themeData.separatorColor
 			? hexToRgb(themeData.separatorColor, DEFAULT_CONFIG.colors.separatorColor)
 			: DEFAULT_CONFIG.colors.separatorColor,
+		labelColor: themeData.labelColor
+			? hexToRgb(themeData.labelColor, DEFAULT_CONFIG.colors.labelColor)
+			: DEFAULT_CONFIG.colors.labelColor,
+		emptyCellColor: themeData.emptyCellColor
+			? hexToRgb(themeData.emptyCellColor, DEFAULT_CONFIG.colors.emptyCellColor)
+			: DEFAULT_CONFIG.colors.emptyCellColor,
+		neonRedPulseBase: themeData.neonRedPulseBase
+			? hexToRgb(themeData.neonRedPulseBase, DEFAULT_CONFIG.colors.neonRedPulseBase)
+			: DEFAULT_CONFIG.colors.neonRedPulseBase,
+		neonRedPulsePeak: themeData.neonRedPulsePeak
+			? hexToRgb(themeData.neonRedPulsePeak, DEFAULT_CONFIG.colors.neonRedPulsePeak)
+			: DEFAULT_CONFIG.colors.neonRedPulsePeak,
 	};
 
 	return {
@@ -146,9 +228,12 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 		enableComet,
 		cometSpeedMs,
 		cometTrackWidth,
+		cometGlyphs,
+		cometColors,
 		warningThreshold,
 		criticalThreshold,
 		resetThreshold,
+		spectrumColors,
 		colors,
 	};
 }

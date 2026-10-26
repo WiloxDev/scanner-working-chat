@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadConfig } from "./config.js";
-import { ScannerWorkingEditor, ARCH_WORKING_INDICATOR } from "./ScannerWorkingEditor.js";
+import { ScannerWorkingEditor } from "./ScannerWorkingEditor.js";
 
 /**
  * Entry point for Gentle-Pi and Gentle-Shell extension runtime.
@@ -17,10 +17,6 @@ export default function activate(pi: ExtensionAPI): void {
 		}
 
 		try {
-			if (typeof (ctx.ui as any)?.setWorkingIndicator === "function") {
-				(ctx.ui as any).setWorkingIndicator(ARCH_WORKING_INDICATOR);
-			}
-
 			ctx.ui.setEditorComponent((tui, theme, keybindings) => {
 				return new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
 			});

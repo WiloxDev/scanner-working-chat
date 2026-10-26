@@ -21,6 +21,22 @@ export interface WorkingTopBorderOptions {
 	ctx: { getContextUsage: () => { percent: number | null } | undefined } | undefined;
 	alertState: boolean;
 	borderColor: (text: string) => string;
+	workingStartTime?: number | null;
+	currentTimestamp?: number;
+}
+
+export function formatDurationBadge(elapsedMs: number): string {
+	if (elapsedMs < 1000) {
+		return `[${(elapsedMs / 1000).toFixed(1)}s]`;
+	}
+	const totalSec = Math.floor(elapsedMs / 1000);
+	if (totalSec < 60) {
+		const dec = Math.floor((elapsedMs % 1000) / 100);
+		return `[${totalSec}.${dec}s]`;
+	}
+	const mins = Math.floor(totalSec / 60);
+	const sec = totalSec % 60;
+	return `[${mins}m${sec < 10 ? "0" : ""}${sec}s]`;
 }
 
 export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string {
@@ -33,6 +49,8 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 		ctx,
 		alertState,
 		borderColor,
+		workingStartTime,
+		currentTimestamp = Date.now(),
 	} = options;
 
 	if (width <= 0) return "";
@@ -42,10 +60,10 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 
 	if (embedWorkingStatus && wsi) {
 		const rawStatus = wsi.renderInBorder?.(Math.max(1, width - 8)) ?? "";
-		const tick = Math.floor(Date.now() / 100) % 12;
+		const tick = config.zenMode ? 0 : Math.floor(currentTimestamp / 100) % 12;
 
 		if (rawStatus) {
-			const comet = (config.enableComet && isWorkingCometEnabled())
+			const comet = (!config.zenMode && config.enableComet && isWorkingCometEnabled())
 				? renderWorkingComet({
 					tick,
 					width: config.cometTrackWidth,
@@ -104,8 +122,24 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 			const label = cleanStatusLabel(rawStatus);
 			const leftParts: string[] = [];
 			if (comet) leftParts.push(comet);
-			leftParts.push(renderSyncFlower(tick, config.flowerIcon, config.colors.flowerColor));
-			leftParts.push(scanWorkingText(label, tick));
+			
+			// If Zen mode, static flower; else animated flower
+			const flower = config.zenMode
+				? `\x1b[38;2;${config.colors.flowerColor[0]};${config.colors.flowerColor[1]};${config.colors.flowerColor[2]}m${config.flowerIcon}\x1b[0m`
+				: renderSyncFlower(tick, config.flowerIcon, config.colors.flowerColor);
+			leftParts.push(flower);
+
+			// Text scan effect or static text in Zen mode
+			const scannedText = config.zenMode ? label : scanWorkingText(label, tick);
+			leftParts.push(scannedText);
+
+			// Duration badge: [X.Xs] or [XmXXs]
+			if (config.showWorkingDuration && workingStartTime && workingStartTime > 0) {
+				const elapsed = Math.max(0, currentTimestamp - workingStartTime);
+				const durationLabel = formatDurationBadge(elapsed);
+				const [lr, lg, lb] = config.colors.labelColor;
+				leftParts.push(`\x1b[38;2;${lr};${lg};${lb}m${durationLabel}\x1b[0m`);
+			}
 
 			const [sr, sg, sb] = config.colors.separatorColor;
 			const SEPARATOR = `   \x1b[38;2;${sr};${sg};${sb}m│\x1b[0m   `;

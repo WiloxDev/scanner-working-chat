@@ -67,10 +67,21 @@ Puedes definir cualquier color en formato hexadecimal (`#RRGGBB` o `#RGB`):
 * `userNameColor`: Color y realce del texto con tu nombre.
 * `flowerColor`: Color base de la flor.
 * `separatorColor`: Color de la barra vertical separadora `   │   ` en el modo de trabajo.
+* `zenMode`: `false` por defecto. Si se activa (`true`), congela animaciones y apaga el cometa.
+* `showWorkingDuration`: `true` por defecto. Muestra el tiempo transcurrido de ejecución del turno en formato `[X.Xs]` o `[XmXXs]`.
 * `labelColor`: Color de la etiqueta `Context` / `Ctx` en el medidor.
 * `emptyCellColor`: Color de las celdas vacías del medidor (gris metálico).
 * `neonRedPulseBase`: Color base del pulso de alarma (reposo).
 * `neonRedPulsePeak`: Color pico del pulso de alarma (Rojo Neón Vivo `#FF1E44` por defecto).
+
+---
+
+## ⚡ Comandos Interactivos en Tiempo Real
+
+No necesitas reiniciar Pi ni editar archivos manualmente para cambiar entre modo dinámico y modo silencioso:
+
+* `/scanner zen`: Alterna instantáneamente el **Modo Zen** (pausa/reanuda animaciones del cometa y rotación de flor sin salir de Pi).
+* `/scanner reload`: Recarga `~/.scanner-chatrc.json` en caliente con validación preventiva de esquema y reporte de errores en notificación.
 
 ---
 

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
+import { detectTerminalProfile, TerminalProfile } from "./terminal-detect.js";
 
 export interface ScannerChatThemeColors {
 	borderColor: [number, number, number];
@@ -15,6 +16,8 @@ export interface ScannerChatThemeColors {
 
 export interface ScannerChatConfig {
 	enabled: boolean;
+	zenMode: boolean;
+	showWorkingDuration: boolean;
 	username: string;
 	userIcon: string;
 	flowerIcon: string;
@@ -29,6 +32,7 @@ export interface ScannerChatConfig {
 	resetThreshold: number;
 	spectrumColors: [number, number, number][];
 	colors: ScannerChatThemeColors;
+	configValidationErrors?: string[];
 }
 
 export function hexToRgb(hex: string, fallback: [number, number, number]): [number, number, number] {
@@ -51,14 +55,14 @@ export function hexToRgb(hex: string, fallback: [number, number, number]): [numb
 	return fallback;
 }
 
-function resolveDefaultUsername(): string {
+export function resolveDefaultUsername(): string {
 	try {
 		const info = userInfo();
-		if (info?.username) return info.username;
+		if (info?.username && info.username.trim().length > 0) return info.username.trim();
 	} catch {
 		// ignore
 	}
-	return process.env.USER || process.env.USERNAME || "Wilox";
+	return (process.env.USER || process.env.USERNAME || "user").trim();
 }
 
 export const DEFAULT_COMET_GLYPHS = ["◆", "●", "•", "∙", "·"] as const;
@@ -86,35 +90,42 @@ export const DEFAULT_LABEL_COLOR: [number, number, number] = [92, 184, 199];
 export const DEFAULT_NEON_RED_PULSE_BASE: [number, number, number] = [120, 20, 35];
 export const DEFAULT_NEON_RED_PULSE_PEAK: [number, number, number] = [255, 30, 68];
 
-export const DEFAULT_CONFIG: ScannerChatConfig = {
-	enabled: true,
-	username: resolveDefaultUsername(),
-	userIcon: "󰣇",
-	flowerIcon: "✿",
-	showContextInIdle: true,
-	enableComet: true,
-	cometSpeedMs: 80,
-	cometTrackWidth: 22,
-	cometGlyphs: [...DEFAULT_COMET_GLYPHS],
-	cometColors: [...DEFAULT_COMET_COLORS],
-	warningThreshold: 70,
-	criticalThreshold: 90,
-	resetThreshold: 15,
-	spectrumColors: [...DEFAULT_SPECTRUM_COLORS],
-	colors: {
-		borderColor: [92, 184, 199],      // #5CB8C7 Pastel Cyan
-		userNameColor: [123, 200, 143],   // #7BC88F Menta suave
-		flowerColor: [92, 184, 199],     // #5CB8C7
-		separatorColor: [138, 78, 158],   // #8A4E9E Violeta suave
-		labelColor: [92, 184, 199],
-		emptyCellColor: [70, 85, 100],
-		neonRedPulseBase: [120, 20, 35],
-		neonRedPulsePeak: [255, 30, 68],
-	},
-};
+export function buildDefaultConfig(terminal: TerminalProfile = detectTerminalProfile()): ScannerChatConfig {
+	return {
+		enabled: true,
+		zenMode: false,
+		showWorkingDuration: true,
+		username: resolveDefaultUsername(),
+		userIcon: terminal.recommendedUserIcon,
+		flowerIcon: terminal.recommendedFlowerIcon,
+		showContextInIdle: true,
+		enableComet: true,
+		cometSpeedMs: 80,
+		cometTrackWidth: 22,
+		cometGlyphs: [...terminal.recommendedCometGlyphs],
+		cometColors: [...DEFAULT_COMET_COLORS],
+		warningThreshold: 70,
+		criticalThreshold: 90,
+		resetThreshold: 15,
+		spectrumColors: [...DEFAULT_SPECTRUM_COLORS],
+		colors: {
+			borderColor: [92, 184, 199],      // #5CB8C7 Pastel Cyan
+			userNameColor: [123, 200, 143],   // #7BC88F Menta suave
+			flowerColor: [92, 184, 199],     // #5CB8C7
+			separatorColor: [138, 78, 158],   // #8A4E9E Violeta suave
+			labelColor: [92, 184, 199],
+			emptyCellColor: [70, 85, 100],
+			neonRedPulseBase: [120, 20, 35],
+			neonRedPulsePeak: [255, 30, 68],
+		},
+	};
+}
+
+export const DEFAULT_CONFIG: ScannerChatConfig = buildDefaultConfig();
 
 export interface LoadConfigOptions {
 	configPath?: string;
+	terminal?: TerminalProfile;
 	overrides?: Partial<ScannerChatConfig> & {
 		theme?: {
 			borderColor?: string;
@@ -132,26 +143,114 @@ export interface LoadConfigOptions {
 	};
 }
 
+export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<string, any>; errors: string[] } {
+	const errors: string[] = [];
+	if (!rawObj || typeof rawObj !== "object" || Array.isArray(rawObj)) {
+		return { sanitized: {}, errors: ["Root configuration must be a valid JSON object"] };
+	}
+
+	const input = rawObj as Record<string, any>;
+	const sanitized: Record<string, any> = {};
+
+	// Validate booleans
+	for (const key of ["enabled", "zenMode", "showWorkingDuration", "showContextInIdle", "enableComet"]) {
+		if (key in input) {
+			if (typeof input[key] === "boolean") {
+				sanitized[key] = input[key];
+			} else {
+				errors.push(`Field '${key}' must be a boolean (got ${typeof input[key]})`);
+			}
+		}
+	}
+
+	// Validate strings
+	for (const key of ["username", "userIcon", "flowerIcon"]) {
+		if (key in input) {
+			if (typeof input[key] === "string" && input[key].trim().length > 0) {
+				sanitized[key] = input[key].trim();
+			} else {
+				errors.push(`Field '${key}' must be a non-empty string`);
+			}
+		}
+	}
+
+	// Validate numbers
+	for (const key of ["cometSpeedMs", "cometTrackWidth", "warningThreshold", "criticalThreshold", "resetThreshold"]) {
+		if (key in input) {
+			const val = Number(input[key]);
+			if (Number.isFinite(val) && val >= 0) {
+				sanitized[key] = val;
+			} else {
+				errors.push(`Field '${key}' must be a positive number`);
+			}
+		}
+	}
+
+	// Threshold coherence
+	const warn = sanitized.warningThreshold ?? input.warningThreshold;
+	const crit = sanitized.criticalThreshold ?? input.criticalThreshold;
+	if (typeof warn === "number" && typeof crit === "number" && warn >= crit) {
+		errors.push(`'warningThreshold' (${warn}) must be less than 'criticalThreshold' (${crit})`);
+	}
+
+	// Validate cometGlyphs
+	if ("cometGlyphs" in input) {
+		if (Array.isArray(input.cometGlyphs) && input.cometGlyphs.length > 0 && input.cometGlyphs.every((g: any) => typeof g === "string")) {
+			sanitized.cometGlyphs = input.cometGlyphs;
+		} else {
+			errors.push("'cometGlyphs' must be a non-empty array of strings");
+		}
+	}
+
+	// Validate cometColors & spectrumColors
+	for (const arrKey of ["cometColors", "spectrumColors"]) {
+		if (arrKey in input) {
+			if (Array.isArray(input[arrKey]) && input[arrKey].length > 0 && input[arrKey].every((c: any) => typeof c === "string")) {
+				sanitized[arrKey] = input[arrKey];
+			} else {
+				errors.push(`'${arrKey}' must be an array of hex color strings`);
+			}
+		}
+	}
+
+	// Pass theme object if present
+	if ("theme" in input && typeof input.theme === "object" && !Array.isArray(input.theme)) {
+		sanitized.theme = input.theme;
+	}
+
+	return { sanitized, errors };
+}
+
 export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
+	const terminal = options.terminal || detectTerminalProfile();
+	const baseDefaults = buildDefaultConfig(terminal);
+
 	const defaultPath = join(homedir(), ".scanner-chatrc.json");
 	const configPath = options.configPath || process.env.SCANNER_CHAT_CONFIG || defaultPath;
 
 	let parsed: any = {};
+	let configValidationErrors: string[] = [];
+
 	if (existsSync(configPath)) {
 		try {
 			const raw = readFileSync(configPath, "utf8");
-			parsed = JSON.parse(raw);
+			const parsedJson = JSON.parse(raw);
+			const validation = validateAndSanitizeConfig(parsedJson);
+			parsed = validation.sanitized;
+			configValidationErrors = validation.errors;
 		} catch (err) {
-			console.warn(`[scanner-working-chat] Warning: Failed to parse ${configPath}:`, err);
+			configValidationErrors = [`Failed to read or parse ${configPath}: ${err instanceof Error ? err.message : String(err)}`];
 		}
 	}
 
 	const overrides = options.overrides || {};
-	const user = overrides.username ?? parsed.username ?? DEFAULT_CONFIG.username;
-	const userIcon = overrides.userIcon ?? parsed.userIcon ?? DEFAULT_CONFIG.userIcon;
-	const flowerIcon = overrides.flowerIcon ?? parsed.flowerIcon ?? DEFAULT_CONFIG.flowerIcon;
-	const enabled = overrides.enabled ?? parsed.enabled ?? DEFAULT_CONFIG.enabled;
-	const showContextInIdle = overrides.showContextInIdle ?? parsed.showContextInIdle ?? DEFAULT_CONFIG.showContextInIdle;
+	const user = overrides.username ?? parsed.username ?? baseDefaults.username;
+	const userIcon = overrides.userIcon ?? parsed.userIcon ?? baseDefaults.userIcon;
+	const flowerIcon = overrides.flowerIcon ?? parsed.flowerIcon ?? baseDefaults.flowerIcon;
+	const enabled = overrides.enabled ?? parsed.enabled ?? baseDefaults.enabled;
+	const zenMode = overrides.zenMode ?? parsed.zenMode ?? baseDefaults.zenMode;
+	const showWorkingDuration = overrides.showWorkingDuration ?? parsed.showWorkingDuration ?? baseDefaults.showWorkingDuration;
+	const showContextInIdle = overrides.showContextInIdle ?? parsed.showContextInIdle ?? baseDefaults.showContextInIdle;
 
 	// Check environment variable GENTLE_PI_WORKING_COMET
 	let envComet: boolean | undefined;
@@ -160,31 +259,31 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 		envComet = !(val === "0" || val === "false" || val === "off");
 	}
 
-	const enableComet = envComet ?? overrides.enableComet ?? parsed.enableComet ?? DEFAULT_CONFIG.enableComet;
-	const cometSpeedMs = overrides.cometSpeedMs ?? parsed.cometSpeedMs ?? DEFAULT_CONFIG.cometSpeedMs;
-	const cometTrackWidth = overrides.cometTrackWidth ?? parsed.cometTrackWidth ?? DEFAULT_CONFIG.cometTrackWidth;
-	const warningThreshold = overrides.warningThreshold ?? parsed.warningThreshold ?? DEFAULT_CONFIG.warningThreshold;
-	const criticalThreshold = overrides.criticalThreshold ?? parsed.criticalThreshold ?? DEFAULT_CONFIG.criticalThreshold;
-	const resetThreshold = overrides.resetThreshold ?? parsed.resetThreshold ?? DEFAULT_CONFIG.resetThreshold;
+	const enableComet = envComet ?? overrides.enableComet ?? parsed.enableComet ?? baseDefaults.enableComet;
+	const cometSpeedMs = overrides.cometSpeedMs ?? parsed.cometSpeedMs ?? baseDefaults.cometSpeedMs;
+	const cometTrackWidth = overrides.cometTrackWidth ?? parsed.cometTrackWidth ?? baseDefaults.cometTrackWidth;
+	const warningThreshold = overrides.warningThreshold ?? parsed.warningThreshold ?? baseDefaults.warningThreshold;
+	const criticalThreshold = overrides.criticalThreshold ?? parsed.criticalThreshold ?? baseDefaults.criticalThreshold;
+	const resetThreshold = overrides.resetThreshold ?? parsed.resetThreshold ?? baseDefaults.resetThreshold;
 
-	// Parse cometGlyphs from config (array of strings)
-	let cometGlyphs = DEFAULT_CONFIG.cometGlyphs;
+	// Parse cometGlyphs
+	let cometGlyphs = baseDefaults.cometGlyphs;
 	if (overrides.cometGlyphs) {
 		cometGlyphs = overrides.cometGlyphs;
 	} else if (parsed.cometGlyphs && Array.isArray(parsed.cometGlyphs)) {
 		cometGlyphs = parsed.cometGlyphs;
 	}
 
-	// Parse cometColors from config (array of hex strings -> RGB)
-	let cometColors = DEFAULT_CONFIG.cometColors;
+	// Parse cometColors
+	let cometColors = baseDefaults.cometColors;
 	if (overrides.cometColors && Array.isArray(overrides.cometColors)) {
 		cometColors = (overrides.cometColors as string[]).map((c) => hexToRgb(c, [0, 0, 0]));
 	} else if (parsed.cometColors && Array.isArray(parsed.cometColors)) {
 		cometColors = (parsed.cometColors as string[]).map((c) => hexToRgb(c, [0, 0, 0]));
 	}
 
-	// Parse spectrumColors from config (array of hex strings -> RGB)
-	let spectrumColors = DEFAULT_CONFIG.spectrumColors;
+	// Parse spectrumColors
+	let spectrumColors = baseDefaults.spectrumColors;
 	if (overrides.spectrumColors && Array.isArray(overrides.spectrumColors)) {
 		spectrumColors = (overrides.spectrumColors as string[]).map((c) => hexToRgb(c, [0, 0, 0]));
 	} else if (parsed.spectrumColors && Array.isArray(parsed.spectrumColors)) {
@@ -194,33 +293,35 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 	const themeData = overrides.theme || parsed.theme || {};
 	const colors: ScannerChatThemeColors = {
 		borderColor: themeData.borderColor
-			? hexToRgb(themeData.borderColor, DEFAULT_CONFIG.colors.borderColor)
-			: DEFAULT_CONFIG.colors.borderColor,
+			? hexToRgb(themeData.borderColor, baseDefaults.colors.borderColor)
+			: baseDefaults.colors.borderColor,
 		userNameColor: themeData.userNameColor
-			? hexToRgb(themeData.userNameColor, DEFAULT_CONFIG.colors.userNameColor)
-			: DEFAULT_CONFIG.colors.userNameColor,
+			? hexToRgb(themeData.userNameColor, baseDefaults.colors.userNameColor)
+			: baseDefaults.colors.userNameColor,
 		flowerColor: themeData.flowerColor
-			? hexToRgb(themeData.flowerColor, DEFAULT_CONFIG.colors.flowerColor)
-			: DEFAULT_CONFIG.colors.flowerColor,
+			? hexToRgb(themeData.flowerColor, baseDefaults.colors.flowerColor)
+			: baseDefaults.colors.flowerColor,
 		separatorColor: themeData.separatorColor
-			? hexToRgb(themeData.separatorColor, DEFAULT_CONFIG.colors.separatorColor)
-			: DEFAULT_CONFIG.colors.separatorColor,
+			? hexToRgb(themeData.separatorColor, baseDefaults.colors.separatorColor)
+			: baseDefaults.colors.separatorColor,
 		labelColor: themeData.labelColor
-			? hexToRgb(themeData.labelColor, DEFAULT_CONFIG.colors.labelColor)
-			: DEFAULT_CONFIG.colors.labelColor,
+			? hexToRgb(themeData.labelColor, baseDefaults.colors.labelColor)
+			: baseDefaults.colors.labelColor,
 		emptyCellColor: themeData.emptyCellColor
-			? hexToRgb(themeData.emptyCellColor, DEFAULT_CONFIG.colors.emptyCellColor)
-			: DEFAULT_CONFIG.colors.emptyCellColor,
+			? hexToRgb(themeData.emptyCellColor, baseDefaults.colors.emptyCellColor)
+			: baseDefaults.colors.emptyCellColor,
 		neonRedPulseBase: themeData.neonRedPulseBase
-			? hexToRgb(themeData.neonRedPulseBase, DEFAULT_CONFIG.colors.neonRedPulseBase)
-			: DEFAULT_CONFIG.colors.neonRedPulseBase,
+			? hexToRgb(themeData.neonRedPulseBase, baseDefaults.colors.neonRedPulseBase)
+			: baseDefaults.colors.neonRedPulseBase,
 		neonRedPulsePeak: themeData.neonRedPulsePeak
-			? hexToRgb(themeData.neonRedPulsePeak, DEFAULT_CONFIG.colors.neonRedPulsePeak)
-			: DEFAULT_CONFIG.colors.neonRedPulsePeak,
+			? hexToRgb(themeData.neonRedPulsePeak, baseDefaults.colors.neonRedPulsePeak)
+			: baseDefaults.colors.neonRedPulsePeak,
 	};
 
 	return {
 		enabled,
+		zenMode,
+		showWorkingDuration,
 		username: user,
 		userIcon,
 		flowerIcon,
@@ -235,5 +336,6 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 		resetThreshold,
 		spectrumColors,
 		colors,
+		configValidationErrors: configValidationErrors.length > 0 ? configValidationErrors : undefined,
 	};
 }

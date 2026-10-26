@@ -239,3 +239,51 @@ test("working-top-border: returns plain border when no rawStatus from indicator"
 	const clean = stripTerminalSequences(result);
 	assert.ok(clean.startsWith("─"), "Must be horizontal border");
 });
+
+test("working-top-border: renders duration badge when enabled and workingStartTime is set", () => {
+	const config = createMockConfig({ showWorkingDuration: true });
+	const borderColor = createBorderColor(config);
+	const ctx = createMockContext(55);
+	const wsi = createMockWorkingIndicator();
+	const startTime = 100000;
+	const currentTimestamp = 103400; // 3.4 seconds later
+
+	const result = renderWorkingTopBorder({
+		width: 120,
+		hiddenLineCount: 0,
+		config,
+		embedWorkingStatus: true,
+		workingIndicator: wsi,
+		ctx,
+		alertState: false,
+		borderColor,
+		workingStartTime: startTime,
+		currentTimestamp,
+	});
+
+	const clean = stripTerminalSequences(result);
+	assert.ok(clean.includes("[3.4s]"), `Should contain elapsed duration badge: ${clean}`);
+});
+
+test("working-top-border: respects zenMode by disabling comet and text animation", () => {
+	const config = createMockConfig({ zenMode: true, enableComet: true });
+	const borderColor = createBorderColor(config);
+	const ctx = createMockContext(55);
+	const wsi = createMockWorkingIndicator();
+
+	const result = renderWorkingTopBorder({
+		width: 120,
+		hiddenLineCount: 0,
+		config,
+		embedWorkingStatus: true,
+		workingIndicator: wsi,
+		ctx,
+		alertState: false,
+		borderColor,
+	});
+
+	const clean = stripTerminalSequences(result);
+	// In zenMode, comet is completely omitted even if enableComet is true
+	assert.ok(!clean.includes("◆") && !clean.includes("●"), `Zen mode should omit comet: ${clean}`);
+	assert.ok(clean.includes("working…"), "Working status should remain static");
+});

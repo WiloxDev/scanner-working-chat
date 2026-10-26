@@ -136,8 +136,10 @@ export const ARCH_WORKING_INDICATOR = {
 export class ScannerWorkingEditor extends CustomEditor {
 	private alertState = false;
 	private readonly ctx?: ExtensionContext;
-	private readonly config: ScannerChatConfig;
+	public config: ScannerChatConfig;
 	private _workingIndicator: WorkingIndicator | null = null;
+	private workingStartTime: number | null = null;
+	private lastWorkingTimestamp: number = Date.now();
 
 	constructor(
 		tui: TUI,
@@ -150,7 +152,11 @@ export class ScannerWorkingEditor extends CustomEditor {
 		this.ctx = ctx;
 		this.config = config;
 
-		const [br, bg, bb] = config.colors.borderColor;
+		this.updateBorderColor();
+	}
+
+	public updateBorderColor(): void {
+		const [br, bg, bb] = this.config.colors.borderColor;
 		this.borderColor = (text: string) => `\x1b[38;2;${br};${bg};${bb}m${text}${RESET}`;
 	}
 
@@ -169,8 +175,14 @@ export class ScannerWorkingEditor extends CustomEditor {
 	protected override renderTopBorder(width: number, hiddenLineCount: number): string {
 		const wsi = this._workingIndicator;
 		const hasWorkingStatus = this.embedWorkingStatus && wsi && wsi.renderInBorder?.(Math.max(1, width - 8));
+		const now = Date.now();
 
 		if (hasWorkingStatus) {
+			if (!this.workingStartTime) {
+				this.workingStartTime = now;
+			}
+			this.lastWorkingTimestamp = now;
+
 			return renderWorkingTopBorder({
 				width,
 				hiddenLineCount,
@@ -180,8 +192,13 @@ export class ScannerWorkingEditor extends CustomEditor {
 				ctx: this.ctx as any,
 				alertState: this.alertState,
 				borderColor: this.borderColor,
+				workingStartTime: this.workingStartTime,
+				currentTimestamp: now,
 			});
 		}
+
+		// Reset working timer when idle
+		this.workingStartTime = null;
 
 		// IDLE state
 		let percent: number | null = null;

@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { loadConfig, hexToRgb, DEFAULT_CONFIG, DEFAULT_COMET_GLYPHS, DEFAULT_COMET_COLORS, DEFAULT_SPECTRUM_COLORS } from "../src/config.ts";
+import {
+	loadConfig,
+	hexToRgb,
+	validateAndSanitizeConfig,
+	DEFAULT_CONFIG,
+	DEFAULT_COMET_GLYPHS,
+	DEFAULT_COMET_COLORS,
+	DEFAULT_SPECTRUM_COLORS,
+} from "../src/config.ts";
 
 test("config: hexToRgb parses hex colors accurately", () => {
 	assert.deepEqual(hexToRgb("#5CB8C7", [0, 0, 0]), [92, 184, 199]);
@@ -12,6 +20,8 @@ test("config: hexToRgb parses hex colors accurately", () => {
 test("config: returns safe defaults when config file is absent", () => {
 	const config = loadConfig({ configPath: "/tmp/non-existent-scanner-config-xyz.json" });
 	assert.equal(config.enabled, true);
+	assert.equal(config.zenMode, false);
+	assert.equal(config.showWorkingDuration, true);
 	assert.ok(typeof config.username === "string" && config.username.length > 0);
 	assert.equal(config.flowerIcon, "✿");
 	assert.equal(config.enableComet, true);
@@ -34,6 +44,7 @@ test("config: applies explicit overrides cleanly", () => {
 			username: "Carlos",
 			flowerIcon: "✦",
 			enableComet: false,
+			zenMode: true,
 			criticalThreshold: 85,
 			theme: {
 				borderColor: "#FF0000",
@@ -44,6 +55,7 @@ test("config: applies explicit overrides cleanly", () => {
 	assert.equal(config.username, "Carlos");
 	assert.equal(config.flowerIcon, "✦");
 	assert.equal(config.enableComet, false);
+	assert.equal(config.zenMode, true);
 	assert.equal(config.criticalThreshold, 85);
 	assert.deepEqual(config.colors.borderColor, [255, 0, 0]);
 	assert.deepEqual(config.colors.userNameColor, DEFAULT_CONFIG.colors.userNameColor);
@@ -81,24 +93,18 @@ test("config: applies comet and spectrum overrides", () => {
 	assert.deepEqual(config.colors.neonRedPulsePeak, [101, 67, 33]);
 });
 
-test("config: loads comet and spectrum from parsed config file", () => {
-	const config = loadConfig({
-		configPath: "/tmp/non-existent-scanner-config-xyz.json",
-		overrides: {},
-		// Simulate parsed config from file
-	} as any);
+test("config: validateAndSanitizeConfig detects invalid schemas safely", () => {
+	const invalidRaw = {
+		enabled: "not-a-boolean",
+		warningThreshold: 95,
+		criticalThreshold: 80, // warning >= critical error
+		cometGlyphs: "not-an-array",
+	};
 
-	// Test that we can pass parsed values directly
-	const config2 = loadConfig({
-		configPath: "/tmp/non-existent-scanner-config-xyz.json",
-		overrides: {
-			cometGlyphs: ["◆", "●"],
-			cometColors: ["#5CB8C7", "#7BC88F"],
-			spectrumColors: ["#4ADE80", "#84CC16", "#A3E635", "#EAB308", "#F59E0B", "#F97316", "#EF4444", "#DC2626"],
-		},
-	});
-
-	assert.deepEqual(config2.cometGlyphs, ["◆", "●"]);
-	assert.deepEqual(config2.cometColors, [[92, 184, 199], [123, 200, 143]]);
-	assert.equal(config2.spectrumColors.length, 8);
+	const { sanitized, errors } = validateAndSanitizeConfig(invalidRaw);
+	assert.equal(errors.length >= 3, true);
+	assert.ok(errors.some((e) => e.includes("enabled")));
+	assert.ok(errors.some((e) => e.includes("warningThreshold")));
+	assert.ok(errors.some((e) => e.includes("cometGlyphs")));
+	assert.equal(sanitized.enabled, undefined);
 });

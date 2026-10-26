@@ -23,6 +23,7 @@ export interface WorkingTopBorderOptions {
 	borderColor: (text: string) => string;
 	workingStartTime?: number | null;
 	currentTimestamp?: number;
+	compactionCount?: number;
 }
 
 export function formatDurationBadge(elapsedMs: number): string {
@@ -139,6 +140,12 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 				const durationLabel = formatDurationBadge(elapsed);
 				const [lr, lg, lb] = config.colors.labelColor;
 				leftParts.push(`\x1b[38;2;${lr};${lg};${lb}m${durationLabel}\x1b[0m`);
+			}
+
+			// Compaction badge in working state if present and fits
+			if (config.showCompactionCount && options.compactionCount && options.compactionCount > 0) {
+				const [lr, lg, lb] = config.colors.labelColor;
+				leftParts.push(`\x1b[38;2;${lr};${lg};${lb}m${config.compactionIcon}×${options.compactionCount}\x1b[0m`);
 			}
 
 			const [sr, sg, sb] = config.colors.separatorColor;

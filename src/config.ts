@@ -18,6 +18,8 @@ export interface ScannerChatConfig {
 	enabled: boolean;
 	zenMode: boolean;
 	showWorkingDuration: boolean;
+	showCompactionCount: boolean;
+	compactionIcon: string;
 	username: string;
 	userIcon: string;
 	flowerIcon: string;
@@ -95,6 +97,8 @@ export function buildDefaultConfig(terminal: TerminalProfile = detectTerminalPro
 		enabled: true,
 		zenMode: false,
 		showWorkingDuration: true,
+		showCompactionCount: true,
+		compactionIcon: terminal.recommendedCompactionIcon,
 		username: resolveDefaultUsername(),
 		userIcon: terminal.recommendedUserIcon,
 		flowerIcon: terminal.recommendedFlowerIcon,
@@ -153,7 +157,7 @@ export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<
 	const sanitized: Record<string, any> = {};
 
 	// Validate booleans
-	for (const key of ["enabled", "zenMode", "showWorkingDuration", "showContextInIdle", "enableComet"]) {
+	for (const key of ["enabled", "zenMode", "showWorkingDuration", "showCompactionCount", "showContextInIdle", "enableComet"]) {
 		if (key in input) {
 			if (typeof input[key] === "boolean") {
 				sanitized[key] = input[key];
@@ -164,7 +168,7 @@ export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<
 	}
 
 	// Validate strings
-	for (const key of ["username", "userIcon", "flowerIcon"]) {
+	for (const key of ["username", "userIcon", "flowerIcon", "compactionIcon"]) {
 		if (key in input) {
 			if (typeof input[key] === "string" && input[key].trim().length > 0) {
 				sanitized[key] = input[key].trim();
@@ -247,9 +251,11 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 	const user = overrides.username ?? parsed.username ?? baseDefaults.username;
 	const userIcon = overrides.userIcon ?? parsed.userIcon ?? baseDefaults.userIcon;
 	const flowerIcon = overrides.flowerIcon ?? parsed.flowerIcon ?? baseDefaults.flowerIcon;
+	const compactionIcon = overrides.compactionIcon ?? parsed.compactionIcon ?? baseDefaults.compactionIcon;
 	const enabled = overrides.enabled ?? parsed.enabled ?? baseDefaults.enabled;
 	const zenMode = overrides.zenMode ?? parsed.zenMode ?? baseDefaults.zenMode;
 	const showWorkingDuration = overrides.showWorkingDuration ?? parsed.showWorkingDuration ?? baseDefaults.showWorkingDuration;
+	const showCompactionCount = overrides.showCompactionCount ?? parsed.showCompactionCount ?? baseDefaults.showCompactionCount;
 	const showContextInIdle = overrides.showContextInIdle ?? parsed.showContextInIdle ?? baseDefaults.showContextInIdle;
 
 	// Check environment variable GENTLE_PI_WORKING_COMET
@@ -322,6 +328,8 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 		enabled,
 		zenMode,
 		showWorkingDuration,
+		showCompactionCount,
+		compactionIcon,
 		username: user,
 		userIcon,
 		flowerIcon,

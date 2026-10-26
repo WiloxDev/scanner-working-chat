@@ -9,6 +9,7 @@ export interface TerminalProfile {
 	hasNerdFont: boolean;
 	recommendedUserIcon: string;
 	recommendedFlowerIcon: string;
+	recommendedCompactionIcon: string;
 	recommendedCometGlyphs: readonly string[];
 	recommendedGaugeFull: string;
 	recommendedGaugeEmpty: string;
@@ -19,6 +20,7 @@ export const ASCII_FALLBACK_PROFILE: TerminalProfile = {
 	hasNerdFont: false,
 	recommendedUserIcon: "@",
 	recommendedFlowerIcon: "*",
+	recommendedCompactionIcon: "[x]",
 	recommendedCometGlyphs: [">", "+", "*", ".", " "],
 	recommendedGaugeFull: "#",
 	recommendedGaugeEmpty: "-",
@@ -29,6 +31,7 @@ export const UNICODE_PROFILE: TerminalProfile = {
 	hasNerdFont: false,
 	recommendedUserIcon: "●",
 	recommendedFlowerIcon: "✿",
+	recommendedCompactionIcon: "📦",
 	recommendedCometGlyphs: ["◆", "●", "•", "∙", "·"],
 	recommendedGaugeFull: "▰",
 	recommendedGaugeEmpty: "▱",
@@ -39,6 +42,7 @@ export const NERD_FONT_PROFILE: TerminalProfile = {
 	hasNerdFont: true,
 	recommendedUserIcon: "󰣇",
 	recommendedFlowerIcon: "✿",
+	recommendedCompactionIcon: "📦",
 	recommendedCometGlyphs: ["◆", "●", "•", "∙", "·"],
 	recommendedGaugeFull: "▰",
 	recommendedGaugeEmpty: "▱",

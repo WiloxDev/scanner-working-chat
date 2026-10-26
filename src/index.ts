@@ -72,4 +72,17 @@ export default function activate(pi: ExtensionAPI): void {
 			console.error("[scanner-working-chat] Failed to install custom prompt editor:", err);
 		}
 	});
+
+	// Listen to session_compact event if supported by Pi to bump compaction count
+	if (typeof (pi as any).on === "function") {
+		try {
+			(pi as any).on("session_compact", () => {
+				if (currentEditor) {
+					currentEditor.compactionCount++;
+				}
+			});
+		} catch {
+			// ignore if event is not registered in this runtime
+		}
+	}
 }

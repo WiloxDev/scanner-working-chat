@@ -140,6 +140,8 @@ export class ScannerWorkingEditor extends CustomEditor {
 	private _workingIndicator: WorkingIndicator | null = null;
 	private workingStartTime: number | null = null;
 	private lastWorkingTimestamp: number = Date.now();
+	public compactionCount = 0;
+	private lastKnownPercent: number | null = null;
 
 	constructor(
 		tui: TUI,
@@ -194,6 +196,7 @@ export class ScannerWorkingEditor extends CustomEditor {
 				borderColor: this.borderColor,
 				workingStartTime: this.workingStartTime,
 				currentTimestamp: now,
+				compactionCount: this.compactionCount,
 			});
 		}
 
@@ -205,6 +208,15 @@ export class ScannerWorkingEditor extends CustomEditor {
 		if (this.ctx) {
 			const usage = this.ctx.getContextUsage();
 			percent = usage?.percent ?? null;
+			// Detect compaction heuristic: if usage drops drastically (>25% drop without session reset)
+			if (percent !== null && this.lastKnownPercent !== null) {
+				if (this.lastKnownPercent - percent >= 25 && percent > 0) {
+					this.compactionCount++;
+				}
+			}
+			if (percent !== null) {
+				this.lastKnownPercent = percent;
+			}
 		}
 		return renderIdleTopBorder({
 			width,
@@ -212,6 +224,7 @@ export class ScannerWorkingEditor extends CustomEditor {
 			config: this.config,
 			username: this.config.username,
 			percent,
+			compactionCount: this.compactionCount,
 			borderColor: this.borderColor,
 		});
 	}

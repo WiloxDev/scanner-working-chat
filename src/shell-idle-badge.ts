@@ -8,11 +8,12 @@ export interface IdleBadgeOptions {
 	config: ScannerChatConfig;
 	username: string;
 	percent: number | null;
+	compactionCount?: number;
 	borderColor: (text: string) => string;
 }
 
 export function renderIdleTopBorder(options: IdleBadgeOptions): string {
-	const { width, hiddenLineCount, config, username, percent, borderColor } = options;
+	const { width, hiddenLineCount, config, username, percent, compactionCount = 0, borderColor } = options;
 
 	if (width <= 0) return "";
 
@@ -28,6 +29,13 @@ export function renderIdleTopBorder(options: IdleBadgeOptions): string {
 		ctxBadge = `  \x1b[38;2;${br};${bg};${bb}m${iconPrefix}Ctx:\x1b[0m ${styledPct}`;
 	}
 
+	// Build compaction badge if count > 0 and enabled
+	let compactBadge = "";
+	if (config.showCompactionCount && compactionCount > 0) {
+		const [lr, lg, lb] = config.colors.labelColor;
+		compactBadge = `  \x1b[38;2;${lr};${lg};${lb}m${config.compactionIcon}×${compactionCount}\x1b[0m`;
+	}
+
 	// Build user badge: icon + username + flower
 	const [br, bg, bb] = config.colors.borderColor;
 	const [ur, ug, ub] = config.colors.userNameColor;
@@ -35,11 +43,16 @@ export function renderIdleTopBorder(options: IdleBadgeOptions): string {
 	const userStr = `\x1b[1;38;2;${ur};${ug};${ub}m${username}\x1b[0m`;
 	const flowerStr = `\x1b[38;2;${br};${bg};${bb}m${config.flowerIcon}\x1b[0m`;
 
-	let userBadge = ` ${iconStr}${userStr} ${flowerStr}${ctxBadge} `;
+	let userBadge = ` ${iconStr}${userStr} ${flowerStr}${ctxBadge}${compactBadge} `;
 	let badgeWidth = visibleWidth(userBadge);
 
-	// Elastic degeneration: drop ctxBadge if too narrow
-	// Need at least 4 chars for border padding on each side
+	// Elastic degeneration step 1: drop compactBadge if narrow
+	if (width < badgeWidth + 4 && compactBadge) {
+		userBadge = ` ${iconStr}${userStr} ${flowerStr}${ctxBadge} `;
+		badgeWidth = visibleWidth(userBadge);
+	}
+
+	// Elastic degeneration step 2: drop ctxBadge if still too narrow
 	if (width < badgeWidth + 4 && ctxBadge) {
 		userBadge = ` ${iconStr}${userStr} ${flowerStr} `;
 		badgeWidth = visibleWidth(userBadge);
@@ -49,8 +62,6 @@ export function renderIdleTopBorder(options: IdleBadgeOptions): string {
 	const overflowLabelWidth = overflowLabel ? visibleWidth(overflowLabel) : 0;
 
 	// Case 1: Fits with overflow label centered
-	// Total width = 1 (left ─) + badgeWidth + rest + overflowLabelWidth + 2 (right ──) = width
-	// So rest = width - badgeWidth - overflowLabelWidth - 3
 	if (width >= badgeWidth + overflowLabelWidth + 6 && overflowLabel) {
 		const rest = width - badgeWidth - overflowLabelWidth - 3;
 		return (
@@ -63,9 +74,6 @@ export function renderIdleTopBorder(options: IdleBadgeOptions): string {
 	}
 
 	// Case 2: Fits without overflow label
-	// Total width = 1 (left ─) + badgeWidth + rest + 0 (no right ── needed, just fill)
-	// Actually: borderColor("─") + userBadge + borderColor("─".repeat(width - badgeWidth - 1))
-	// = 1 + badgeWidth + (width - badgeWidth - 1) = width ✓
 	if (width >= badgeWidth + 4) {
 		return (
 			borderColor("─") +

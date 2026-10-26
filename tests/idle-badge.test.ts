@@ -118,3 +118,41 @@ test("idle-badge: handles very narrow terminal (minimum width)", () => {
 	const clean = stripTerminalSequences(result);
 	assert.ok(clean.startsWith("─"), "Must start with horizontal border char");
 });
+
+test("idle-badge: renders compaction count badge when compactionCount > 0", () => {
+	const config = createMockConfig({ showCompactionCount: true, compactionIcon: "📦" });
+	const borderColor = createBorderColor(config);
+
+	const result = renderIdleTopBorder({
+		width: 100,
+		hiddenLineCount: 0,
+		config,
+		username: "Wilox",
+		percent: 35,
+		compactionCount: 2,
+		borderColor,
+	});
+
+	const clean = stripTerminalSequences(result);
+	assert.ok(clean.includes("📦×2"), `Should display compaction count badge: ${clean}`);
+	assert.equal(visibleWidth(result), 100, "Width must match exactly");
+});
+
+test("idle-badge: omits compaction badge when compactionCount is 0", () => {
+	const config = createMockConfig({ showCompactionCount: true, compactionIcon: "📦" });
+	const borderColor = createBorderColor(config);
+
+	const result = renderIdleTopBorder({
+		width: 100,
+		hiddenLineCount: 0,
+		config,
+		username: "Wilox",
+		percent: 35,
+		compactionCount: 0,
+		borderColor,
+	});
+
+	const clean = stripTerminalSequences(result);
+	assert.ok(!clean.includes("📦"), `Should not contain compaction badge when count is 0: ${clean}`);
+	assert.equal(visibleWidth(result), 100, "Width must match exactly");
+});

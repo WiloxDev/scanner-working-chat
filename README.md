@@ -1,7 +1,7 @@
 # 🌸 Scanner Working Chat (`scanner-working-chat`)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-41%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-43%20passing-brightgreen.svg)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%200%20errors-blue.svg)]()
 [![Gentle-Pi Compatible](https://img.shields.io/badge/Gentle--Pi-v0.87.1%2B-purple.svg)]()
 
@@ -35,6 +35,8 @@ Muestra tu identidad de usuario, rotación sutil de la flor y el porcentaje limp
 ╰─────────────────────────────────────────────────────────────────────────────────╯
 ```
 
+*(Si la sesión ha sufrido compactaciones de contexto, aparece automáticamente un discreto contador `📦×1`, `📦×2`, manteniéndose 100% invisible en sesiones nuevas).*
+
 ### 2. Estado Activo (`WORKING` — Agente pensando / ejecutando herramientas)
 El badge superior se transforma en una consola de instrumentación fluida:
 
@@ -58,6 +60,7 @@ El badge superior se transforma en una consola de instrumentación fluida:
 | **Visibilidad de Estado** | Texto plano estático sin movimiento | Cometa cinemático + onda lumínica reflectiva |
 | **Control de Contexto** | Debes consultar comandos o mirar logs | Medidor visual en tiempo real en cada frame |
 | **Alarma de Saturación** | Ninguna (el agente olvida sin avisar) | Alarma senoidal en Rojo Neón Vivo (`#FF1E44`) con retención |
+| **Historial de Compactaciones** | Desconocido (no sabes qué ha olvidado) | Contador discreto `📦×N` tras resumir contexto |
 | **Latencia de Turnos** | Desconocida a simple vista | Cronómetro integrado de duración (`[X.Xs]`) |
 | **Compatibilidad Terminal** | Puede romper caracteres si no hay fuentes | Autodetección: conmuta a ASCII puro si no hay UTF-8 |
 | **Modo Zen / Silencioso** | No disponible | Comando `/scanner zen` para pausar animaciones al vuelo |
@@ -121,6 +124,8 @@ Todo aspecto visual es 100% configurable mediante un archivo JSON sencillo en tu
   "username": "carlos",
   "userIcon": "󰣇",
   "flowerIcon": "✿",
+  "showCompactionCount": true,
+  "compactionIcon": "📦",
   "zenMode": false,
   "showWorkingDuration": true,
   "showContextInIdle": true,
@@ -150,7 +155,7 @@ Para ver la guía exhaustiva de personalización (estilos Cyberpunk, Minimalista
 
 * **No invasivo:** No toca banners de bienvenida (`setHeader`), ni pie de página de Git y modelos (`setFooter`), ni barras laterales de estado (`setWidget`).
 * **Protección contra actualizaciones:** Construido usando contratos limpios de API pública, sin depender de variables privadas que puedan romperse con futuras versiones de Pi.
-* **41 Pruebas Unitarias (TDD):** Código auditado quirúrgicamente con pruebas automatizadas de ancho invariante, degradación elástica en terminales angostas y sanitización estricta.
+* **43 Pruebas Unitarias (TDD):** Código auditado quirúrgicamente con pruebas automatizadas de ancho invariante, degradación elástica en terminales angostas y sanitización estricta.
 
 ```bash
 npm test

@@ -140,6 +140,7 @@ export class ScannerWorkingEditor extends CustomEditor {
 	private _workingIndicator: WorkingIndicator | null = null;
 	private workingStartTime: number | null = null;
 	private lastWorkingTimestamp: number = Date.now();
+	private transitionUntil: number | null = null;
 	public compactionCount = 0;
 	private lastKnownPercent: number | null = null;
 
@@ -184,6 +185,7 @@ export class ScannerWorkingEditor extends CustomEditor {
 				this.workingStartTime = now;
 			}
 			this.lastWorkingTimestamp = now;
+			this.transitionUntil = null;
 
 			return renderWorkingTopBorder({
 				width,
@@ -200,8 +202,30 @@ export class ScannerWorkingEditor extends CustomEditor {
 			});
 		}
 
-		// Reset working timer when idle
-		this.workingStartTime = null;
+		// Handle smooth active-to-idle transition (~200ms)
+		if (this.workingStartTime !== null) {
+			if (this.transitionUntil === null) {
+				this.transitionUntil = now + 200;
+			}
+			if (now < this.transitionUntil) {
+				// During transition window, render the completed working state or smooth decay
+				return renderWorkingTopBorder({
+					width,
+					hiddenLineCount,
+					config: this.config,
+					embedWorkingStatus: this.embedWorkingStatus,
+					workingIndicator: wsi ?? { renderInBorder: () => "" },
+					ctx: this.ctx as any,
+					alertState: this.alertState,
+					borderColor: this.borderColor,
+					workingStartTime: this.workingStartTime,
+					currentTimestamp: now,
+					compactionCount: this.compactionCount,
+				});
+			}
+			this.workingStartTime = null;
+			this.transitionUntil = null;
+		}
 
 		// IDLE state
 		let percent: number | null = null;

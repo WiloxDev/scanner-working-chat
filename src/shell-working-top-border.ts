@@ -61,7 +61,11 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 
 	if (embedWorkingStatus && wsi) {
 		const rawStatus = wsi.renderInBorder?.(Math.max(1, width - 8)) ?? "";
-		const tick = config.zenMode ? 0 : Math.floor(currentTimestamp / 100) % 12;
+		const elapsedMs = (workingStartTime && workingStartTime > 0)
+			? Math.max(0, currentTimestamp - workingStartTime)
+			: 0;
+		const speed = Math.max(10, config.cometSpeedMs || 80);
+		const tick = config.zenMode ? 0 : Math.floor(elapsedMs / speed);
 
 		if (rawStatus) {
 			const comet = (!config.zenMode && config.enableComet && isWorkingCometEnabled())

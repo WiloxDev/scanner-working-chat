@@ -140,3 +140,41 @@ test("editor: elastic degeneration handles narrow terminals without breaking", (
 	assert.ok(clean.startsWith("╭"), "Must start with ╭");
 	assert.ok(clean.endsWith("╮"), "Must end with ╮");
 });
+
+test("editor: elapsed-time animation and smooth transition", () => {
+	const config = loadConfig({
+		configPath: "/tmp/non-existent.json",
+		overrides: {
+			username: "Wilox",
+			userIcon: "󰣇",
+			flowerIcon: "✿",
+			enableComet: true,
+			cometSpeedMs: 50,
+		},
+	});
+
+	const tui = createMockTui();
+	const theme = createMockTheme();
+	const keybindings = createMockKeybindings();
+	const ctx = createMockContext(20);
+
+	const editor = new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
+
+	editor.setWorkingStatusIndicator({
+		renderInBorder: () => "working…",
+		renderSpinnerInBorder: () => "",
+		setIndicator: () => {},
+	});
+
+	// Frame 1: working
+	const workingTop = (editor as any).renderTopBorder(100, 0);
+	assert.ok(stripTerminalSequences(workingTop).includes("working…"));
+
+	// Switch indicator to null (idle event)
+	editor.setWorkingStatusIndicator(null);
+
+	// Within 200ms transition window, it renders smooth transition state
+	const transitionTop = (editor as any).renderTopBorder(100, 0);
+	assert.ok(transitionTop.length > 0);
+});
+

@@ -154,6 +154,7 @@ Para ver la guía exhaustiva de personalización (estilos Cyberpunk, Minimalista
 ## 🛡️ Principio de Convivencia y Arquitectura Robusta
 
 * **No invasivo:** No toca banners de bienvenida (`setHeader`), ni pie de página de Git y modelos (`setFooter`), ni barras laterales de estado (`setWidget`).
+* **Coexistencia con Temas y Editores:** Pi admite un único `CustomEditor` activo a la vez. Cuando tanto `scanner-working-chat` como un tema con editor propio (ej. `wilox-theme`) están instalados, el control del área del editor depende del orden de inicialización en `session_start` (el último registrado toma el editor, mientras los headers y footers del tema permanecen intactos).
 * **Protección contra actualizaciones:** Construido usando contratos limpios de API pública, sin depender de variables privadas que puedan romperse con futuras versiones de Pi.
 * **43 Pruebas Unitarias (TDD):** Código auditado quirúrgicamente con pruebas automatizadas de ancho invariante, degradación elástica en terminales angostas y sanitización estricta.
 

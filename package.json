@@ -42,5 +42,12 @@
     "extensions": [
       "dist/index.js"
     ]
+  },
+  "wiloxCommunity": {
+    "id": "chat-scanner",
+    "title": "Chat Scanner & Working Comet",
+    "author": "WiloxDev",
+    "category": "Community",
+    "order": 20
   }
 }

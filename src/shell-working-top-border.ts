@@ -18,6 +18,8 @@ export interface WorkingTopBorderOptions {
 	config: ScannerChatConfig;
 	embedWorkingStatus: boolean;
 	workingIndicator: WorkingIndicator | null;
+	statusLabel?: string;
+	isWaiting?: boolean;
 	ctx: { getContextUsage: () => { percent: number | null } | undefined } | undefined;
 	alertState: boolean;
 	borderColor: (text: string) => string;
@@ -59,16 +61,20 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 	const wsi = workingIndicator;
 	let status = "";
 
-	if (embedWorkingStatus && wsi) {
-		const rawStatus = wsi.renderInBorder?.(Math.max(1, width - 8)) ?? "";
+	const rawStatus =
+		(embedWorkingStatus && wsi?.renderInBorder?.(Math.max(1, width - 8))) ||
+		(embedWorkingStatus && options.statusLabel) ||
+		"";
+
+	if (embedWorkingStatus && rawStatus) {
 		const elapsedMs = (workingStartTime && workingStartTime > 0)
 			? Math.max(0, currentTimestamp - workingStartTime)
 			: 0;
 		const speed = Math.max(10, config.cometSpeedMs || 80);
-		const tick = config.zenMode ? 0 : Math.floor(elapsedMs / speed);
+		const tick = (config.zenMode || options.isWaiting) ? 0 : Math.floor(elapsedMs / speed);
 
 		if (rawStatus) {
-			const comet = (!config.zenMode && config.enableComet && isWorkingCometEnabled())
+			const comet = (!config.zenMode && !options.isWaiting && config.enableComet && isWorkingCometEnabled())
 				? renderWorkingComet({
 					tick,
 					width: config.cometTrackWidth,
@@ -81,7 +87,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 				: "";
 
 			let contextStr = "";
-			if (ctx) {
+			if (config.showWorkingContext !== false && ctx) {
 				const usage = ctx.getContextUsage();
 				const percent = usage?.percent ?? null;
 				const newAlertState = evaluateAlertState(
@@ -93,9 +99,11 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 
 				const label = cleanStatusLabel(rawStatus);
 				const labelWidth = visibleWidth(label);
-				const cometWidth = comet ? config.cometTrackWidth + 1 : 0;
-				const separatorWidth = 7;
-				const availableForContext = width - labelWidth - cometWidth - separatorWidth - 15;
+				const cometWidth = comet ? config.cometTrackWidth + 2 : 0;
+				const durationEstWidth = config.showWorkingDuration ? 9 : 0;
+				const compactionEstWidth = (config.showCompactionCount && options.compactionCount && options.compactionCount > 0) ? 6 : 0;
+				const baseOccupied = 4 + cometWidth + 2 + labelWidth + durationEstWidth + compactionEstWidth + 10;
+				const availableForContext = width - baseOccupied;
 				const tier: ContextMirrorTier =
 					availableForContext >= 25 ? "full" : availableForContext >= 15 ? "short" : "percentOnly";
 
@@ -124,41 +132,42 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 				}
 			}
 
-			const label = cleanStatusLabel(rawStatus);
-			const leftParts: string[] = [];
-			if (comet) leftParts.push(comet);
-			
 			// If Zen mode, static flower; else animated flower
 			const flower = config.zenMode
 				? `\x1b[38;2;${config.colors.flowerColor[0]};${config.colors.flowerColor[1]};${config.colors.flowerColor[2]}m${config.flowerIcon}\x1b[0m`
 				: renderSyncFlower(tick, config.flowerIcon, config.colors.flowerColor);
-			leftParts.push(flower);
 
 			// Text scan effect or static text in Zen mode
+			const label = cleanStatusLabel(rawStatus);
 			const scannedText = config.zenMode ? label : scanWorkingText(label, tick);
-			leftParts.push(scannedText);
 
-			// Duration badge: [X.Xs] or [XmXXs]
+			const [sr, sg, sb] = config.colors.separatorColor;
+			const SEPARATOR = ` \x1b[38;2;${sr};${sg};${sb}m│\x1b[0m `;
+
+			// 1. Comet + space + Flower + space + action text
+			const actionSection = `${comet ? `${comet}  ` : ""}${flower} ${scannedText}`;
+			const mainChainParts: string[] = [actionSection];
+
+			// 2. Duration badge: [X.Xs]
 			if (config.showWorkingDuration && workingStartTime && workingStartTime > 0) {
 				const elapsed = Math.max(0, currentTimestamp - workingStartTime);
 				const durationLabel = formatDurationBadge(elapsed);
 				const [lr, lg, lb] = config.colors.labelColor;
-				leftParts.push(`\x1b[38;2;${lr};${lg};${lb}m${durationLabel}\x1b[0m`);
+				mainChainParts.push(`\x1b[38;2;${lr};${lg};${lb}m${durationLabel}\x1b[0m`);
 			}
 
-			// Compaction badge in working state if present and fits
+			// 3. Compaction badge: 󰁨×n (only if > 0)
 			if (config.showCompactionCount && options.compactionCount && options.compactionCount > 0) {
 				const [lr, lg, lb] = config.colors.labelColor;
-				leftParts.push(`\x1b[38;2;${lr};${lg};${lb}m${config.compactionIcon}×${options.compactionCount}\x1b[0m`);
+				mainChainParts.push(`\x1b[38;2;${lr};${lg};${lb}m${config.compactionIcon}×${options.compactionCount}\x1b[0m`);
 			}
 
-			const [sr, sg, sb] = config.colors.separatorColor;
-			const SEPARATOR = `   \x1b[38;2;${sr};${sg};${sb}m│\x1b[0m   `;
+			// 4. Context mirror immediately follows in sequence
 			if (contextStr) {
-				status = `${leftParts.join(" ")}${SEPARATOR}${contextStr}`;
-			} else {
-				status = leftParts.join(" ");
+				mainChainParts.push(contextStr);
 			}
+
+			status = mainChainParts.join(SEPARATOR);
 		}
 	}
 
@@ -176,8 +185,17 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 	let currentStatus = status;
 	let currentStatusWidth = statusWidth;
 
+	const fallbackSpinner = () =>
+		config.zenMode || options.isWaiting
+			? `\x1b[38;2;${config.colors.flowerColor[0]};${config.colors.flowerColor[1]};${config.colors.flowerColor[2]}m${config.flowerIcon}\x1b[0m`
+			: renderSyncFlower(
+				config.zenMode ? 0 : Math.floor(Math.max(0, currentTimestamp - (workingStartTime || 0)) / Math.max(10, config.cometSpeedMs || 80)),
+				config.flowerIcon,
+				config.colors.flowerColor,
+			);
+
 	if (overflowLabel && !canFitOverflow()) {
-		currentStatus = wsi?.renderSpinnerInBorder?.(width) ?? "";
+		currentStatus = wsi?.renderSpinnerInBorder?.(width) ?? fallbackSpinner();
 		currentStatusWidth = visibleWidth(currentStatus);
 	}
 
@@ -196,7 +214,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 		return borderColor("── ") + currentStatus + borderColor(` ${"─".repeat(width - currentStatusWidth - 4)}`);
 	}
 
-	currentStatus = wsi?.renderSpinnerInBorder?.(width) ?? "";
+	currentStatus = wsi?.renderSpinnerInBorder?.(width) ?? fallbackSpinner();
 	currentStatusWidth = visibleWidth(currentStatus);
 	const prefixWidth = Math.min(3, Math.max(0, width - currentStatusWidth));
 	return (

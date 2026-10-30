@@ -1,7 +1,16 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 import { detectTerminalProfile, TerminalProfile } from "./terminal-detect.js";
+
+export function getWiloxUnifiedConfigPath(): string {
+	return join(homedir(), ".config", "wiloxdev", "settings.json");
+}
+
+export function getLegacyScannerConfigPath(): string {
+	return join(homedir(), ".scanner-chatrc.json");
+}
 
 export interface ScannerChatThemeColors {
 	borderColor: [number, number, number];
@@ -19,6 +28,7 @@ export interface ScannerChatConfig {
 	zenMode: boolean;
 	showWorkingDuration: boolean;
 	showCompactionCount: boolean;
+	showWorkingContext: boolean;
 	compactionIcon: string;
 	username: string;
 	userIcon: string;
@@ -98,14 +108,15 @@ export function buildDefaultConfig(terminal: TerminalProfile = detectTerminalPro
 		zenMode: false,
 		showWorkingDuration: true,
 		showCompactionCount: true,
+		showWorkingContext: true,
 		compactionIcon: terminal.recommendedCompactionIcon,
 		username: resolveDefaultUsername(),
 		userIcon: terminal.recommendedUserIcon,
 		flowerIcon: terminal.recommendedFlowerIcon,
 		showContextInIdle: true,
 		enableComet: true,
-		cometSpeedMs: 80,
-		cometTrackWidth: 22,
+		cometSpeedMs: 45,
+		cometTrackWidth: 10,
 		cometGlyphs: [...terminal.recommendedCometGlyphs],
 		cometColors: [...DEFAULT_COMET_COLORS],
 		warningThreshold: 70,
@@ -157,7 +168,7 @@ export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<
 	const sanitized: Record<string, any> = {};
 
 	// Validate booleans
-	for (const key of ["enabled", "zenMode", "showWorkingDuration", "showCompactionCount", "showContextInIdle", "enableComet"]) {
+	for (const key of ["enabled", "zenMode", "showWorkingDuration", "showCompactionCount", "showWorkingContext", "showContextInIdle", "enableComet"]) {
 		if (key in input) {
 			if (typeof input[key] === "boolean") {
 				sanitized[key] = input[key];
@@ -225,25 +236,115 @@ export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<
 	return { sanitized, errors };
 }
 
+export function persistUserConfigPatch(patch: Record<string, any>): void {
+	const unifiedPath = getWiloxUnifiedConfigPath();
+	const unifiedDir = join(homedir(), ".config", "wiloxdev");
+	const legacyPath = getLegacyScannerConfigPath();
+
+	// 1. Persistir atómicamente en el Almacén Central Unificado (~/.config/wiloxdev/settings.json)
+	try {
+		mkdirSync(unifiedDir, { recursive: true });
+		let fullUnified: any = {};
+		if (existsSync(unifiedPath)) {
+			try {
+				fullUnified = JSON.parse(readFileSync(unifiedPath, "utf8")) || {};
+			} catch {
+				fullUnified = {};
+			}
+		}
+
+		fullUnified.schema = fullUnified.schema || "wiloxdev.unified/v1";
+		fullUnified.scanner = {
+			...(fullUnified.scanner || {}),
+			...patch,
+		};
+
+		const tempUnified = `${unifiedPath}.${randomUUID()}.tmp`;
+		writeFileSync(tempUnified, JSON.stringify(fullUnified, null, 2) + "\n", { mode: 0o600 });
+		renameSync(tempUnified, unifiedPath);
+	} catch (err) {
+		console.warn("[scanner-working-chat] Error en persistencia unificada (~/.config/wiloxdev/settings.json):", err);
+	}
+
+	// 2. Espejo Atómico Retrocompatible en ~/.scanner-chatrc.json
+	try {
+		let currentLegacy: any = {};
+		if (existsSync(legacyPath)) {
+			try {
+				currentLegacy = JSON.parse(readFileSync(legacyPath, "utf8")) || {};
+			} catch {
+				currentLegacy = {};
+			}
+		}
+		Object.assign(currentLegacy, patch);
+		const tempLegacy = `${legacyPath}.${randomUUID()}.tmp`;
+		writeFileSync(tempLegacy, JSON.stringify(currentLegacy, null, 2) + "\n", { mode: 0o600 });
+		renameSync(tempLegacy, legacyPath);
+	} catch (err) {
+		console.warn("[scanner-working-chat] Error en sincronización de espejo legacy (~/.scanner-chatrc.json):", err);
+	}
+}
+
 export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 	const terminal = options.terminal || detectTerminalProfile();
 	const baseDefaults = buildDefaultConfig(terminal);
 
-	const defaultPath = join(homedir(), ".scanner-chatrc.json");
-	const configPath = options.configPath || process.env.SCANNER_CHAT_CONFIG || defaultPath;
+	const unifiedPath = getWiloxUnifiedConfigPath();
+	const legacyPath = getLegacyScannerConfigPath();
+	const explicitPath = options.configPath || process.env.SCANNER_CHAT_CONFIG;
 
 	let parsed: any = {};
 	let configValidationErrors: string[] = [];
 
-	if (existsSync(configPath)) {
+	// Prioridad 1: Si hay ruta explícita (testing o override de entorno)
+	if (explicitPath && existsSync(explicitPath)) {
 		try {
-			const raw = readFileSync(configPath, "utf8");
+			const raw = readFileSync(explicitPath, "utf8");
 			const parsedJson = JSON.parse(raw);
-			const validation = validateAndSanitizeConfig(parsedJson);
+			// Si es un archivo unificado con clave .scanner
+			const targetData = parsedJson?.scanner ? parsedJson.scanner : parsedJson;
+			const validation = validateAndSanitizeConfig(targetData);
 			parsed = validation.sanitized;
 			configValidationErrors = validation.errors;
 		} catch (err) {
-			configValidationErrors = [`Failed to read or parse ${configPath}: ${err instanceof Error ? err.message : String(err)}`];
+			configValidationErrors = [`Failed to read or parse ${explicitPath}: ${err instanceof Error ? err.message : String(err)}`];
+		}
+	} else {
+		// Prioridad 2: Almacén unificado POSIX ~/.config/wiloxdev/settings.json
+		let loadedFromUnified = false;
+		if (existsSync(unifiedPath)) {
+			try {
+				const raw = readFileSync(unifiedPath, "utf8");
+				const unifiedJson = JSON.parse(raw);
+				if (unifiedJson && typeof unifiedJson === "object" && unifiedJson.scanner) {
+					const validation = validateAndSanitizeConfig(unifiedJson.scanner);
+					parsed = validation.sanitized;
+					configValidationErrors = validation.errors;
+					loadedFromUnified = true;
+				}
+			} catch (err) {
+				configValidationErrors.push(`Failed to read unified config ${unifiedPath}: ${err instanceof Error ? err.message : String(err)}`);
+			}
+		}
+
+		// Fallback o Fusión con almacén legacy ~/.scanner-chatrc.json
+		if (existsSync(legacyPath)) {
+			try {
+				const raw = readFileSync(legacyPath, "utf8");
+				const legacyJson = JSON.parse(raw);
+				const validation = validateAndSanitizeConfig(legacyJson);
+				if (!loadedFromUnified) {
+					parsed = validation.sanitized;
+					configValidationErrors = validation.errors;
+				} else {
+					// Rellenar campos que no estuvieran en el unificado
+					parsed = { ...validation.sanitized, ...parsed };
+				}
+			} catch (err) {
+				if (!loadedFromUnified) {
+					configValidationErrors.push(`Failed to read legacy config ${legacyPath}: ${err instanceof Error ? err.message : String(err)}`);
+				}
+			}
 		}
 	}
 
@@ -256,6 +357,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 	const zenMode = overrides.zenMode ?? parsed.zenMode ?? baseDefaults.zenMode;
 	const showWorkingDuration = overrides.showWorkingDuration ?? parsed.showWorkingDuration ?? baseDefaults.showWorkingDuration;
 	const showCompactionCount = overrides.showCompactionCount ?? parsed.showCompactionCount ?? baseDefaults.showCompactionCount;
+	const showWorkingContext = overrides.showWorkingContext ?? parsed.showWorkingContext ?? baseDefaults.showWorkingContext;
 	const showContextInIdle = overrides.showContextInIdle ?? parsed.showContextInIdle ?? baseDefaults.showContextInIdle;
 
 	// Check environment variable GENTLE_PI_WORKING_COMET
@@ -329,6 +431,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 		zenMode,
 		showWorkingDuration,
 		showCompactionCount,
+		showWorkingContext,
 		compactionIcon,
 		username: user,
 		userIcon,

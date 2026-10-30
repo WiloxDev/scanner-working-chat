@@ -176,5 +176,87 @@ test("editor: elapsed-time animation and smooth transition", () => {
 	// Within 200ms transition window, it renders smooth transition state
 	const transitionTop = (editor as any).renderTopBorder(100, 0);
 	assert.ok(transitionTop.length > 0);
+
+	editor.dispose();
+});
+
+test("editor: renders working border when agent is active even if working indicator is null", () => {
+	const config = loadConfig({
+		configPath: "/tmp/non-existent.json",
+		overrides: {
+			username: "Wilox",
+			userIcon: "󰣇",
+			flowerIcon: "✿",
+		},
+	});
+
+	const tui = createMockTui();
+	const theme = createMockTheme();
+	const keybindings = createMockKeybindings();
+	const ctx = createMockContext(42);
+
+	const editor = new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
+
+	// Indicator is null (e.g. setWorkingVisible(false) invoked by host)
+	editor.setWorkingStatusIndicator(null);
+	// Agent becomes active
+	editor.setAgentActive(true);
+
+	const top = (editor as any).renderTopBorder(100, 0);
+	const clean = stripTerminalSequences(top);
+
+	assert.ok(!clean.includes("Wilox"), `User name should not appear during working: ${clean}`);
+	assert.ok(clean.includes("working…"), `Should contain fallback working status: ${clean}`);
+	assert.ok(clean.includes("Context"), `Should contain context gauge: ${clean}`);
+	assert.ok(clean.includes("42%"), `Should contain percentage: ${clean}`);
+
+	// Contextual action updates
+	editor.setCurrentAction("bash…");
+	const bashTop = (editor as any).renderTopBorder(100, 0);
+	assert.ok(stripTerminalSequences(bashTop).includes("bash…"));
+
+	// Waiting state updates
+	editor.setWaitingState(true);
+	const waitTop = (editor as any).renderTopBorder(100, 0);
+	assert.ok(stripTerminalSequences(waitTop).includes("waiting…"));
+
+	editor.dispose();
+});
+
+test("editor: manages animation timer cleanly without leaking and avoids double timers", () => {
+	const config = loadConfig({
+		configPath: "/tmp/non-existent.json",
+	});
+
+	let renderRequests = 0;
+	const tui = {
+		...createMockTui(),
+		requestRender: () => {
+			renderRequests++;
+		},
+	};
+	const theme = createMockTheme();
+	const keybindings = createMockKeybindings();
+	const ctx = createMockContext(10);
+
+	const editor = new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
+
+	// When indicator is present, native indicator manages animation timer -> editor internal timer stays null
+	editor.setWorkingStatusIndicator({
+		renderInBorder: () => "working…",
+		renderSpinnerInBorder: () => "",
+		setIndicator: () => {},
+	});
+	editor.setAgentActive(true);
+	assert.equal((editor as any).animationTimer, null, "Should not create duplicate timer when indicator is present");
+
+	// When indicator is cleared/null (Issue #1 scenario), internal animation timer activates
+	editor.setWorkingStatusIndicator(null);
+	assert.notEqual((editor as any).animationTimer, null, "Should activate internal timer when indicator is null");
+
+	// Dispose cleanly cleans up timer
+	editor.dispose();
+	assert.equal((editor as any).animationTimer, null, "Dispose should clear animation timer");
+	assert.equal(editor.getIsAgentActive(), false);
 });
 

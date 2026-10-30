@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { loadConfig, type ScannerChatConfig } from "./config.js";
+import { loadConfig, persistUserConfigPatch, type ScannerChatConfig } from "./config.js";
 import { ScannerWorkingEditor } from "./ScannerWorkingEditor.js";
+import { registerChatScannerModule } from "./wilox-community.js";
 
 /**
  * Entry point for Gentle-Pi and Gentle-Shell extension runtime.
@@ -12,6 +13,25 @@ export default function activate(pi: ExtensionAPI): void {
 	}
 
 	let currentEditor: ScannerWorkingEditor | null = null;
+	let sessionIsAgentActive = false;
+	let sessionWorkingStartTime: number | null = null;
+
+	// Registrar y sincronizar en el bus global de Acordeón Modular de WiloxDev
+	try {
+		registerChatScannerModule(
+			() => config,
+			(newConfig) => {
+				config = newConfig;
+				if (currentEditor) {
+					currentEditor.config = { ...config };
+					currentEditor.updateBorderColor();
+					(currentEditor as any).tui?.requestRender();
+				}
+			}
+		);
+	} catch (err) {
+		console.warn("[scanner-working-chat] Error registrando módulo de comunidad WiloxDev:", err);
+	}
 
 	// Register interactive command /scanner to toggle Zen Mode or reload config on the fly
 	if (typeof (pi as any).registerCommand === "function") {
@@ -43,12 +63,92 @@ export default function activate(pi: ExtensionAPI): void {
 					return notifyMsg;
 				}
 
-				return "Usage:\n  /scanner zen     - Toggle Zen Mode (pause/resume comet & animations)\n  /scanner reload  - Reload ~/.scanner-chatrc.json without restarting Pi";
+				if (sub.startsWith("name ") || sub.startsWith("username ")) {
+					const parts = (args || "").trim().split(/\s+/);
+					const newName = parts.slice(1).join(" ").trim();
+					if (!newName) {
+						return "⚠️ Proporciona un nombre válido: /scanner name <nombre> (Ej: /scanner name Wilox)";
+					}
+
+					config.username = newName;
+					if (currentEditor) {
+						currentEditor.config = { ...config };
+						(currentEditor as any).tui?.requestRender();
+					}
+
+					persistUserConfigPatch({ username: newName });
+					const successMsg = `👤 Nombre actualizado a '${newName}' en el badge de chat.`;
+					ctx?.ui?.notify?.(successMsg, "info");
+					return successMsg;
+				}
+
+				if (sub === "ctx" || sub === "context") {
+					// Toggle de ambos contextos (idle y working) para experiencia intuitiva
+					const nextState = !(config.showWorkingContext && config.showContextInIdle);
+					config.showWorkingContext = nextState;
+					config.showContextInIdle = nextState;
+					if (currentEditor) {
+						currentEditor.config = { ...config };
+						(currentEditor as any).tui?.requestRender();
+					}
+					persistUserConfigPatch({
+						showWorkingContext: nextState,
+						showContextInIdle: nextState,
+					});
+					const statusMsg = nextState
+						? "📊 Medidor de Contexto ACTIVADO (visible en IDLE y WORKING)"
+						: "📊 Medidor de Contexto DESACTIVADO (oculto en IDLE y WORKING)";
+					ctx?.ui?.notify?.(statusMsg, "info");
+					return statusMsg;
+				}
+
+				if (sub === "time" || sub === "duration") {
+					config.showWorkingDuration = !config.showWorkingDuration;
+					if (currentEditor) {
+						currentEditor.config = { ...config };
+						(currentEditor as any).tui?.requestRender();
+					}
+					persistUserConfigPatch({ showWorkingDuration: config.showWorkingDuration });
+					const statusMsg = config.showWorkingDuration
+						? "⏱️ Badge de tiempo [3.4s] ACTIVADO"
+						: "⏱️ Badge de tiempo [3.4s] DESACTIVADO";
+					ctx?.ui?.notify?.(statusMsg, "info");
+					return statusMsg;
+				}
+
+				if (sub === "comp" || sub === "compaction") {
+					config.showCompactionCount = !config.showCompactionCount;
+					if (currentEditor) {
+						currentEditor.config = { ...config };
+						(currentEditor as any).tui?.requestRender();
+					}
+					persistUserConfigPatch({ showCompactionCount: config.showCompactionCount });
+					const statusMsg = config.showCompactionCount
+						? "󰁨 Badge de compactaciones (󰁨×n) ACTIVADO"
+						: "󰁨 Badge de compactaciones (󰁨×n) DESACTIVADO";
+					ctx?.ui?.notify?.(statusMsg, "info");
+					return statusMsg;
+				}
+
+				return "Comandos disponibles de /scanner:\n" +
+					"  /scanner name <nombre>  - Cambiar tu nombre de badge (Ej: /scanner name Wilox)\n" +
+					"  /scanner ctx            - Ocultar o mostrar medidor de contexto (Ctx / Context [■■□□])\n" +
+					"  /scanner time           - Ocultar o mostrar badge de tiempo transcurrido [3.4s]\n" +
+					"  /scanner comp           - Ocultar o mostrar contador de compactaciones 󰁨×n\n" +
+					"  /scanner zen            - Alternar Zen Mode (pausar o reanudar cometa y animaciones)\n" +
+					"  /scanner reload         - Recargar ~/.scanner-chatrc.json sin reiniciar Pi";
 			},
 		});
 	}
 
 	pi.on("session_start", (_event, ctx) => {
+		if (currentEditor) {
+			currentEditor.dispose();
+			currentEditor = null;
+		}
+		sessionIsAgentActive = false;
+		sessionWorkingStartTime = null;
+
 		if (!ctx?.hasUI || typeof ctx.ui?.setEditorComponent !== "function") {
 			return;
 		}
@@ -65,11 +165,76 @@ export default function activate(pi: ExtensionAPI): void {
 
 		try {
 			ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+				if (currentEditor) {
+					currentEditor.dispose();
+				}
 				currentEditor = new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
+				if (sessionIsAgentActive) {
+					currentEditor.setAgentActive(true, sessionWorkingStartTime ?? undefined);
+				}
 				return currentEditor;
 			});
 		} catch (err) {
 			console.error("[scanner-working-chat] Failed to install custom prompt editor:", err);
+		}
+	});
+
+	pi.on("session_shutdown", () => {
+		if (currentEditor) {
+			currentEditor.dispose();
+			currentEditor = null;
+		}
+		sessionIsAgentActive = false;
+		sessionWorkingStartTime = null;
+	});
+
+	// Lifecycle hooks for robust working state tracking & telemetry
+	pi.on("agent_start", () => {
+		sessionIsAgentActive = true;
+		if (!sessionWorkingStartTime) {
+			sessionWorkingStartTime = Date.now();
+		}
+		if (currentEditor) {
+			currentEditor.setAgentActive(true, sessionWorkingStartTime);
+		}
+	});
+
+	pi.on("turn_start", () => {
+		sessionIsAgentActive = true;
+		if (!sessionWorkingStartTime) {
+			sessionWorkingStartTime = Date.now();
+		}
+		if (currentEditor) {
+			currentEditor.setAgentActive(true, sessionWorkingStartTime);
+		}
+	});
+
+	pi.on("agent_end", () => {
+		// Interim boundary: agent is finishing current execution loop
+		if (currentEditor) {
+			currentEditor.setWaitingState(false);
+		}
+	});
+
+	pi.on("agent_settled", () => {
+		sessionIsAgentActive = false;
+		sessionWorkingStartTime = null;
+		if (currentEditor) {
+			currentEditor.setAgentActive(false);
+		}
+	});
+
+	// Contextual telemetry during tool execution
+	pi.on("tool_execution_start", (event: any) => {
+		const toolName = event?.toolName || "tool";
+		if (currentEditor) {
+			currentEditor.setCurrentAction(`${toolName}…`);
+		}
+	});
+
+	pi.on("tool_execution_end", () => {
+		if (currentEditor) {
+			currentEditor.setCurrentAction("working…");
 		}
 	});
 

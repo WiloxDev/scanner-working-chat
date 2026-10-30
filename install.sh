@@ -7,6 +7,20 @@ set -e
 REPO_URL="https://github.com/WiloxDev/scanner-working-chat.git"
 DEFAULT_EXT_DIR="$HOME/.pi/agent/extensions/scanner-working-chat"
 
+# Parse CLI arguments (e.g., ./install.sh --name "Wilox")
+CHOSEN_USER="${SCANNER_USER:-}"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --name|-n)
+            CHOSEN_USER="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
 echo "🌸 Instalando 'Scanner Working Chat' para Gentle-Pi / Gentle-Shell..."
 
 # 1. Determinar el directorio de extensiones de Pi
@@ -23,13 +37,13 @@ mkdir -p "$PI_EXT_BASE"
 # 2. Clonar o Actualizar el Repositorio
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ -d "$TARGET_EXT_DIR/.git" ]; then
-    echo "🔄 Actualizando versión existente en $TARGET_EXT_DIR..."
-    git -C "$TARGET_EXT_DIR" pull --ff-only
-elif [ "$SCRIPT_DIR" != "$TARGET_EXT_DIR" ] && [ -f "$SCRIPT_DIR/package.json" ]; then
+if [ "$SCRIPT_DIR" != "$TARGET_EXT_DIR" ] && [ -f "$SCRIPT_DIR/package.json" ]; then
     echo "📦 Copiando extensión local a $TARGET_EXT_DIR..."
     rm -rf "$TARGET_EXT_DIR"
     cp -r "$SCRIPT_DIR" "$TARGET_EXT_DIR"
+elif [ -d "$TARGET_EXT_DIR/.git" ]; then
+    echo "🔄 Actualizando versión existente en $TARGET_EXT_DIR..."
+    git -C "$TARGET_EXT_DIR" pull --ff-only 2>/dev/null || true
 else
     echo "📥 Clonando extensión en $TARGET_EXT_DIR..."
     rm -rf "$TARGET_EXT_DIR"
@@ -44,46 +58,84 @@ if command -v npm >/dev/null 2>&1; then
     npm run build --silent
 fi
 
-# 4. Crear configuración por defecto si no existe
-USER_CONFIG="$HOME/.scanner-chatrc.json"
-CURRENT_USER="${USER:-$(whoami)}"
+# 4. Sincronizar Almacén Central Unificado POSIX (~/.config/wiloxdev/settings.json) y legacy (~/.scanner-chatrc.json)
+UNIFIED_CONFIG_DIR="$HOME/.config/wiloxdev"
+UNIFIED_CONFIG="$UNIFIED_CONFIG_DIR/settings.json"
+LEGACY_CONFIG="$HOME/.scanner-chatrc.json"
+CURRENT_MACHINE_NAME="$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo "${USER:-user}")"
 
-if [ ! -f "$USER_CONFIG" ]; then
-    echo "⚙️  Creando archivo de configuración personal en $USER_CONFIG..."
-    cat << EOF > "$USER_CONFIG"
-{
-  "username": "$CURRENT_USER",
-  "userIcon": "󰣇",
-  "flowerIcon": "✿",
-  "showContextInIdle": true,
-  "enableComet": true,
-  "cometSpeedMs": 80,
-  "cometTrackWidth": 22,
-  "cometGlyphs": ["◆", "●", "•", "∙", "·"],
-  "cometColors": ["#5CB8C7", "#4EA0B2", "#40879B", "#30697D", "#204B5F"],
-  "warningThreshold": 70,
-  "criticalThreshold": 90,
-  "resetThreshold": 15,
-  "spectrumColors": [
-    "#4ADE80", "#84CC16", "#A3E635", "#EAB308",
-    "#F59E0B", "#F97316", "#EF4444", "#DC2626"
-  ],
-  "theme": {
-    "borderColor": "#5CB8C7",
-    "userNameColor": "#7BC88F",
-    "flowerColor": "#5CB8C7",
-    "separatorColor": "#8A4E9E",
-    "labelColor": "#5CB8C7",
-    "emptyCellColor": "#465564",
-    "neonRedPulseBase": "#781423",
-    "neonRedPulsePeak": "#FF1E44"
-  }
-}
-EOF
+mkdir -p "$UNIFIED_CONFIG_DIR"
+
+if [ -z "$CHOSEN_USER" ]; then
+    echo ""
+    echo "👤 Configuración de Identidad:"
+    echo "   1) Por defecto: Nombre del equipo ('$CURRENT_MACHINE_NAME')"
+    echo "   2) Personalizado: Elige tu propio alias (Ej: Wilox)"
+    echo ""
+    if [ -t 0 ]; then
+        read -r -p "👉 ¿Qué nombre deseas mostrar en el badge? [Enter para '$CURRENT_MACHINE_NAME']: " INPUT_USER
+        CHOSEN_USER="${INPUT_USER:-$CURRENT_MACHINE_NAME}"
+    elif (exec </dev/tty) 2>/dev/null; then
+        read -r -p "👉 ¿Qué nombre deseas mostrar en el badge? [Enter para '$CURRENT_MACHINE_NAME']: " INPUT_USER </dev/tty 2>/dev/null || true
+        CHOSEN_USER="${INPUT_USER:-$CURRENT_MACHINE_NAME}"
+    fi
+fi
+CHOSEN_USER="${CHOSEN_USER:-$CURRENT_MACHINE_NAME}"
+
+# Crear o actualizar en el almacén unificado usando node de forma atómica POSIX
+if command -v node >/dev/null 2>&1; then
+    node -e "
+    const fs = require('fs');
+    const path = '$UNIFIED_CONFIG';
+    const legacyPath = '$LEGACY_CONFIG';
+    const chosen = '$CHOSEN_USER';
+    
+    let unified = {};
+    if (fs.existsSync(path)) {
+        try { unified = JSON.parse(fs.readFileSync(path, 'utf8')); } catch {}
+    }
+    unified.schema = unified.schema || 'wiloxdev.unified/v1';
+    unified.ui = unified.ui || { lastExpandedModule: 'chat-scanner' };
+    unified.sidebar = unified.sidebar || { width: 38, breakpoint: 115, gap: 2 };
+    unified.scanner = {
+        username: chosen,
+        zenMode: false,
+        showWorkingContext: true,
+        showContextInIdle: true,
+        showWorkingDuration: true,
+        showCompactionCount: true,
+        userIcon: '󰣇',
+        flowerIcon: '✿',
+        enableComet: true,
+        cometSpeedMs: 45,
+        cometTrackWidth: 10,
+        ...(unified.scanner || {})
+    };
+    if (chosen && chosen !== '$CURRENT_MACHINE_NAME') {
+        unified.scanner.username = chosen;
+    }
+    
+    // Escritura atómica POSIX en settings.json
+    const tmp = path + '.' + require('crypto').randomUUID() + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(unified, null, 2) + '\n', { mode: 0o600 });
+    fs.renameSync(tmp, path);
+
+    // Sincronizar espejo legacy ~/.scanner-chatrc.json
+    const tmpLegacy = legacyPath + '.' + require('crypto').randomUUID() + '.tmp';
+    fs.writeFileSync(tmpLegacy, JSON.stringify(unified.scanner, null, 2) + '\n', { mode: 0o600 });
+    fs.renameSync(tmpLegacy, legacyPath);
+    " 2>/dev/null || true
 fi
 
 echo ""
 echo "✅ ¡Instalación completada con éxito!"
 echo "📍 Ubicación: $TARGET_EXT_DIR"
-echo "⚙️ Configuración: $USER_CONFIG (Totalmente personalizable)"
+echo "👤 Badge configurado como: '󰣇 $CHOSEN_USER ✿'"
+echo "⚙️  Almacén Unificado: $UNIFIED_CONFIG"
+echo ""
+echo "✨ Control Visual y Personalización Nativa:"
+echo "   Abre en tu chat: /gentle:customize  ➔  Community  ➔  WiloxDev"
+echo "   Allí podrás ajustar badge, cometa, context gauge o zen mode interactivamente."
+echo "   • /scanner reload         - Recargar ~/.scanner-chatrc.json sin reiniciar Pi"
+echo ""
 echo "✨ Al abrir tu próxima sesión de Gentle-Pi o ejecutar /reload, tu recuadro de chat cobrará vida."

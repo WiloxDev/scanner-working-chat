@@ -144,6 +144,13 @@ export class ScannerWorkingEditor extends CustomEditor {
 	public compactionCount = 0;
 	private lastKnownPercent: number | null = null;
 
+	// Lifecycle tracking & decoupled animation
+	private isAgentActive = false;
+	private isWaiting = false;
+	private currentAction = "working…";
+	private animationTimer: ReturnType<typeof setInterval> | null = null;
+	private isDisposed = false;
+
 	constructor(
 		tui: TUI,
 		theme: EditorTheme,
@@ -163,6 +170,79 @@ export class ScannerWorkingEditor extends CustomEditor {
 		this.borderColor = (text: string) => `\x1b[38;2;${br};${bg};${bb}m${text}${RESET}`;
 	}
 
+	public setAgentActive(active: boolean, initialStartTime?: number): void {
+		if (this.isDisposed) return;
+		this.isAgentActive = active;
+
+		if (active) {
+			if (!this.workingStartTime) {
+				this.workingStartTime = initialStartTime ?? Date.now();
+			}
+			this.lastWorkingTimestamp = Date.now();
+			this.transitionUntil = null;
+			this.isWaiting = false;
+			this.syncAnimationTimer();
+		} else {
+			// Settled / finished
+			this.isWaiting = false;
+			this.currentAction = "working…";
+			this.syncAnimationTimer();
+		}
+		this.tui.requestRender();
+	}
+
+	public getIsAgentActive(): boolean {
+		return this.isAgentActive;
+	}
+
+	public getWorkingStartTime(): number | null {
+		return this.workingStartTime;
+	}
+
+	public setWaitingState(waiting: boolean): void {
+		if (this.isDisposed) return;
+		this.isWaiting = waiting;
+		this.tui.requestRender();
+	}
+
+	public setCurrentAction(action: string): void {
+		if (this.isDisposed) return;
+		this.currentAction = action;
+		this.tui.requestRender();
+	}
+
+	private syncAnimationTimer(): void {
+		const needsCustomTimer = (this.isAgentActive || this.transitionUntil !== null) && !this._workingIndicator;
+
+		if (needsCustomTimer && !this.animationTimer && !this.isDisposed) {
+			const intervalMs = Math.max(25, this.config.cometSpeedMs || 45);
+			this.animationTimer = setInterval(() => {
+				if (this.isDisposed) {
+					this.stopAnimationTimer();
+					return;
+				}
+				this.tui.requestRender();
+			}, intervalMs);
+		} else if (!needsCustomTimer && this.animationTimer) {
+			this.stopAnimationTimer();
+		}
+	}
+
+	private stopAnimationTimer(): void {
+		if (this.animationTimer) {
+			clearInterval(this.animationTimer);
+			this.animationTimer = null;
+		}
+	}
+
+	public dispose(): void {
+		this.isDisposed = true;
+		this.stopAnimationTimer();
+		this.isAgentActive = false;
+		this.workingStartTime = null;
+		this.transitionUntil = null;
+	}
+
 	override setWorkingStatusIndicator(indicator: any): void {
 		if (indicator && typeof indicator.setIndicator === "function") {
 			indicator.setIndicator({
@@ -172,20 +252,27 @@ export class ScannerWorkingEditor extends CustomEditor {
 			indicator._hasArchIndicator = true;
 		}
 		this._workingIndicator = indicator;
+		this.syncAnimationTimer();
 		super.setWorkingStatusIndicator(indicator);
 	}
 
 	protected override renderTopBorder(width: number, hiddenLineCount: number): string {
 		const wsi = this._workingIndicator;
-		const hasWorkingStatus = this.embedWorkingStatus && wsi && wsi.renderInBorder?.(Math.max(1, width - 8));
+		const nativeStatus = wsi?.renderInBorder?.(Math.max(1, width - 8));
+		const isEffectivelyWorking = Boolean(
+			this.embedWorkingStatus && (nativeStatus || (this.isAgentActive && this.currentAction)),
+		);
 		const now = Date.now();
 
-		if (hasWorkingStatus) {
+		if (isEffectivelyWorking) {
 			if (!this.workingStartTime) {
 				this.workingStartTime = now;
 			}
 			this.lastWorkingTimestamp = now;
 			this.transitionUntil = null;
+			this.syncAnimationTimer();
+
+			const statusLabel = nativeStatus || (this.isWaiting ? "waiting…" : this.currentAction);
 
 			return renderWorkingTopBorder({
 				width,
@@ -193,6 +280,8 @@ export class ScannerWorkingEditor extends CustomEditor {
 				config: this.config,
 				embedWorkingStatus: this.embedWorkingStatus,
 				workingIndicator: wsi,
+				statusLabel,
+				isWaiting: this.isWaiting,
 				ctx: this.ctx as any,
 				alertState: this.alertState,
 				borderColor: this.borderColor,
@@ -206,15 +295,18 @@ export class ScannerWorkingEditor extends CustomEditor {
 		if (this.workingStartTime !== null) {
 			if (this.transitionUntil === null) {
 				this.transitionUntil = now + 200;
+				this.syncAnimationTimer();
 			}
 			if (now < this.transitionUntil) {
-				// During transition window, render the completed working state or smooth decay
+				const statusLabel = nativeStatus || this.currentAction;
 				return renderWorkingTopBorder({
 					width,
 					hiddenLineCount,
 					config: this.config,
 					embedWorkingStatus: this.embedWorkingStatus,
-					workingIndicator: wsi ?? { renderInBorder: () => "" },
+					workingIndicator: wsi ?? null,
+					statusLabel,
+					isWaiting: false,
 					ctx: this.ctx as any,
 					alertState: this.alertState,
 					borderColor: this.borderColor,
@@ -225,6 +317,7 @@ export class ScannerWorkingEditor extends CustomEditor {
 			}
 			this.workingStartTime = null;
 			this.transitionUntil = null;
+			this.stopAnimationTimer();
 		}
 
 		// IDLE state

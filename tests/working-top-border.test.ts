@@ -36,14 +36,18 @@ function createMockWorkingIndicator() {
 	};
 }
 
-test("working-top-border: renders working instrumentation with comet and context", () => {
-	const config = createMockConfig();
+test("working-top-border: sequence is contiguous: action -> duration -> compaction -> context", () => {
+	const config = createMockConfig({
+		enableComet: true,
+		showWorkingDuration: true,
+		showCompactionCount: true,
+	});
 	const borderColor = createBorderColor(config);
-	const ctx = createMockContext(55);
+	const ctx = createMockContext(48);
 	const wsi = createMockWorkingIndicator();
 
 	const result = renderWorkingTopBorder({
-		width: 100,
+		width: 120,
 		hiddenLineCount: 0,
 		config,
 		embedWorkingStatus: true,
@@ -51,14 +55,25 @@ test("working-top-border: renders working instrumentation with comet and context
 		ctx,
 		alertState: false,
 		borderColor,
+		workingStartTime: Date.now() - 3500,
+		compactionCount: 2,
 	});
 
 	const clean = stripTerminalSequences(result);
-	assert.ok(clean.includes("working…"), `Should contain working label: ${clean}`);
-	assert.ok(clean.includes("Context"), `Should contain context gauge: ${clean}`);
-	assert.ok(clean.includes("55%"), `Should contain percentage: ${clean}`);
-	assert.ok(clean.includes("│"), `Should contain vertical separator: ${clean}`);
-	assert.equal(visibleWidth(result), 100, "Width must match exactly");
+	// Check order of appearance
+	const idxWorking = clean.indexOf("working…");
+	const idxDuration = clean.indexOf("[3.5s]");
+	const idxCompaction = clean.indexOf("×2");
+	const idxContext = clean.indexOf("Context");
+
+	assert.ok(idxWorking !== -1, "working label found");
+	assert.ok(idxDuration !== -1, "duration badge found");
+	assert.ok(idxCompaction !== -1, "compaction badge found");
+	assert.ok(idxContext !== -1, "context mirror found");
+
+	assert.ok(idxWorking < idxDuration, "Action must appear before duration");
+	assert.ok(idxDuration < idxCompaction, "Duration must appear before compaction");
+	assert.ok(idxCompaction < idxContext, "Compaction must appear immediately before Context");
 });
 
 test("working-top-border: does not show username in working state", () => {
@@ -102,6 +117,51 @@ test("working-top-border: shows comet when enabled", () => {
 	const clean = stripTerminalSequences(result);
 	// Comet glyphs should be present
 	assert.ok(clean.includes("◆") || clean.includes("●") || clean.includes("•"), `Should contain comet particles: ${clean}`);
+});
+
+test("working-top-border: hides context mirror when showWorkingContext is false", () => {
+	const config = createMockConfig({ showWorkingContext: false });
+	const borderColor = createBorderColor(config);
+	const ctx = createMockContext(55);
+	const wsi = createMockWorkingIndicator();
+
+	const result = renderWorkingTopBorder({
+		width: 100,
+		hiddenLineCount: 0,
+		config,
+		embedWorkingStatus: true,
+		workingIndicator: wsi,
+		ctx,
+		alertState: false,
+		borderColor,
+	});
+
+	const clean = stripTerminalSequences(result);
+	assert.ok(!clean.includes("Context"), `Context mirror must not be displayed: ${clean}`);
+	assert.ok(!clean.includes("55%"), `Context percent must not be displayed: ${clean}`);
+});
+
+test("working-top-border: hides duration badge when showWorkingDuration is false", () => {
+	const config = createMockConfig({ showWorkingDuration: false });
+	const borderColor = createBorderColor(config);
+	const ctx = createMockContext(55);
+	const wsi = createMockWorkingIndicator();
+
+	const result = renderWorkingTopBorder({
+		width: 100,
+		hiddenLineCount: 0,
+		config,
+		embedWorkingStatus: true,
+		workingIndicator: wsi,
+		ctx,
+		alertState: false,
+		borderColor,
+		workingStartTime: Date.now() - 3400,
+		currentTimestamp: Date.now(),
+	});
+
+	const clean = stripTerminalSequences(result);
+	assert.ok(!clean.includes("[3.4s]") && !clean.includes("[3.3s]"), `Duration badge must not be displayed: ${clean}`);
 });
 
 test("working-top-border: hides comet when disabled", () => {

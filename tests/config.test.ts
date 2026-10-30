@@ -4,6 +4,7 @@ import {
 	loadConfig,
 	hexToRgb,
 	validateAndSanitizeConfig,
+	resolveDefaultUsername,
 	DEFAULT_CONFIG,
 	DEFAULT_COMET_GLYPHS,
 	DEFAULT_COMET_COLORS,
@@ -107,4 +108,9 @@ test("config: validateAndSanitizeConfig detects invalid schemas safely", () => {
 	assert.ok(errors.some((e) => e.includes("warningThreshold")));
 	assert.ok(errors.some((e) => e.includes("cometGlyphs")));
 	assert.equal(sanitized.enabled, undefined);
+});
+
+test("config: resolveDefaultUsername handles fallback safely", () => {
+	const user = resolveDefaultUsername();
+	assert.ok(typeof user === "string" && user.length > 0, "Username must resolve to non-empty string");
 });

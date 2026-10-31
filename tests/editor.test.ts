@@ -226,10 +226,37 @@ test("editor: renders working border when agent is active even if working indica
 	editor.dispose();
 });
 
+test("editor: animation timer samples the fastest configured effect, not only the comet", () => {
+	const config = loadConfig({
+		configPath: "/tmp/non-existent.json",
+		overrides: { cometSpeedMs: 200, textScanSpeedMs: 100 },
+	});
+	const editor = new ScannerWorkingEditor(
+		createMockTui(), createMockTheme(), createMockKeybindings(), createMockContext(10), config,
+	);
+
+	const captured: number[] = [];
+	const realSetInterval = globalThis.setInterval;
+	(globalThis as any).setInterval = (fn: any, ms: any) => {
+		captured.push(ms);
+		// Long probe timer: never fires during the test, always cleared by dispose() below.
+		return realSetInterval(fn, 60_000);
+	};
+	try {
+		editor.setAgentActive(true);
+	} finally {
+		(globalThis as any).setInterval = realSetInterval;
+		editor.dispose();
+	}
+
+	assert.equal(captured.length, 1, "one animation timer should start");
+	assert.ok(captured[0] <= 100, `redraw interval ${captured[0]}ms must sample the 100ms text scan`);
+});
+
 test("editor: manages animation timer cleanly for comet animation", () => {
 	const config = loadConfig({
 		configPath: "/tmp/non-existent.json",
-		cometSpeedMs: 50,
+		overrides: { cometSpeedMs: 50 },
 	});
 
 	let renderRequests = 0;

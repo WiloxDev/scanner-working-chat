@@ -13,8 +13,9 @@
   "flowerIcon": "✿",
   "showContextInIdle": true,
   "enableComet": true,
-  "cometSpeedMs": 80,
-  "cometTrackWidth": 22,
+  "cometSpeedMs": 45,
+  "textScanSpeedMs": 100,
+  "cometTrackWidth": 10,
   "cometGlyphs": ["◆", "●", "•", "∙", "·"],
   "cometColors": ["#5CB8C7", "#4EA0B2", "#40879B", "#30697D", "#204B5F"],
   "warningThreshold": 70,
@@ -48,8 +49,9 @@
 | `flowerIcon` | `string` | `"✿"` | Glifo de la flor. Si se establece `"✿"`, activará la rotación multiciclo (`✿ → ❀ → ❁ → ✾`) en estado de trabajo. |
 | `showContextInIdle` | `boolean` | `true` | Muestra u oculta la cápsula `Ctx: X%` cuando el agente está en reposo. |
 | `enableComet` | `boolean` | `true` | Activa o desactiva la animación del cometa de partículas. También controlable con la variable de entorno `GENTLE_PI_WORKING_COMET=0`. |
-| `cometSpeedMs` | `number` | `80` | Intervalo de refresco en milisegundos para la animación del cometa. |
-| `cometTrackWidth` | `number` | `22` | Ancho horizontal del riel por el que viaja el cometa. |
+| `cometSpeedMs` | `number` | `45` | Periodo en milisegundos del ciclo cometa + flor. No controla el barrido del texto: para eso está `textScanSpeedMs`. |
+| `textScanSpeedMs` | `number` | `100` | Periodo en milisegundos del barrido de luz sobre el texto de estado. Avanza en sincronía de reloj con el cometa, pero a su propio ritmo. |
+| `cometTrackWidth` | `number` | `10` | Ancho horizontal del riel por el que viaja el cometa. |
 | `cometGlyphs` | `string[]` | `["◆","●","•","∙","·"]` | Secuencia de glifos para la estela del cometa (cabeza → cola). |
 | `cometColors` | `string[]` (hex) | 5 tonos cyan | Colores para cada glifo del cometa (mismo orden que `cometGlyphs`). Formato `#RRGGBB` o `#RGB`. |
 | `warningThreshold` | `number` | `70` | Porcentaje a partir del cual el medidor de contexto pasa a tonos ámbar/naranja (transición suave en celdas 5-6). |

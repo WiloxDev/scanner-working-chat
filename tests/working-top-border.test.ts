@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
-import { renderWorkingTopBorder } from "../src/shell-working-top-border.ts";
+import { deriveWorkingTiming, renderWorkingTopBorder } from "../src/shell-working-top-border.ts";
 import { loadConfig, DEFAULT_CONFIG } from "../src/config.ts";
 import { scanWorkingText } from "../src/ScannerWorkingEditor.ts";
 
@@ -71,19 +71,37 @@ test("working-top-border: bidirectional comet and flower repeat their configured
 	}
 });
 
-test("working-top-border: text scan keeps its 100ms speed independently of the comet", () => {
-	const render = (cometSpeedMs: number, elapsed: number) => renderWorkingTopBorder({
+test("working-timing: comet, text and render interval derive from one timing source", () => {
+	const config = createMockConfig({ cometSpeedMs: 45, textScanSpeedMs: 100 });
+	assert.deepEqual(deriveWorkingTiming(90, config), { cometTick: 2, textTick: 0, renderIntervalMs: 45 });
+	assert.deepEqual(deriveWorkingTiming(1000, config), { cometTick: 22, textTick: 10, renderIntervalMs: 45 });
+	assert.deepEqual(deriveWorkingTiming(1000, config, true), { cometTick: 0, textTick: 0, renderIntervalMs: 45 });
+});
+
+test("working-timing: a slow comet never starves the text scan cadence", () => {
+	const config = createMockConfig({ cometSpeedMs: 200, textScanSpeedMs: 100 });
+	assert.ok(deriveWorkingTiming(0, config).renderIntervalMs <= 100, "redraw must sample the fastest effect");
+});
+
+test("working-timing: a degenerate speed falls back to the single documented default", () => {
+	const expectedCometTick = Math.floor(1000 / Math.max(10, DEFAULT_CONFIG.cometSpeedMs));
+	assert.equal(deriveWorkingTiming(1000, createMockConfig({ cometSpeedMs: 0 })).cometTick, expectedCometTick);
+	assert.equal(deriveWorkingTiming(1000, createMockConfig({ textScanSpeedMs: 0 })).textTick, Math.floor(1000 / Math.max(10, DEFAULT_CONFIG.textScanSpeedMs)));
+});
+
+test("working-top-border: text scan uses textScanSpeedMs independently of the comet", () => {
+	const render = (cometSpeedMs: number, textScanSpeedMs: number, elapsed: number) => renderWorkingTopBorder({
 		width: 100, hiddenLineCount: 0,
-		config: createMockConfig({ cometSpeedMs, showWorkingIdentity: false, showWorkingContext: false, showWorkingDuration: false }),
+		config: createMockConfig({ cometSpeedMs, textScanSpeedMs, showWorkingIdentity: false, showWorkingContext: false, showWorkingDuration: false }),
 		embedWorkingStatus: true, workingIndicator: createMockWorkingIndicator(), ctx: undefined,
 		alertState: false, borderColor: (text: string) => text,
 		workingStartTime: 1000, currentTimestamp: 1000 + elapsed,
 	});
-	assert.notEqual(render(45, 90), render(45, 0), "comet advances before 100ms");
-	for (const speed of [45, 80]) {
-		for (const elapsed of [90, 100, 250]) {
-			assert.ok(render(speed, elapsed).includes(scanWorkingText("working…", Math.floor(elapsed / 100))),
-				`text should use a 100ms tick at ${elapsed}ms with comet speed ${speed}ms`);
+	assert.notEqual(render(45, 100, 90), render(45, 100, 0), "comet advances before the text tick does");
+	for (const cometSpeedMs of [45, 200]) {
+		for (const elapsed of [90, 100, 250, 1000]) {
+			assert.ok(render(cometSpeedMs, 100, elapsed).includes(scanWorkingText("working…", Math.floor(elapsed / 100))),
+				`text should use a ${100}ms tick at ${elapsed}ms with comet speed ${cometSpeedMs}ms`);
 		}
 	}
 });

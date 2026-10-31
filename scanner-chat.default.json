@@ -4,8 +4,9 @@
   "flowerIcon": "✿",
   "showContextInIdle": true,
   "enableComet": true,
-  "cometSpeedMs": 80,
-  "contextAlertThreshold": 90,
+  "cometSpeedMs": 45,
+  "textScanSpeedMs": 100,
+  "cometTrackWidth": 10,
   "theme": {
     "borderColor": "#5CB8C7",
     "userNameColor": "#7BC88F",

@@ -258,8 +258,9 @@ graph TD
     CONFIG --> CTX_IDLE[showContextInIdle: true]
     
     CONFIG --> COMET_EN[enableComet: true]
-    CONFIG --> COMET_SPEED[cometSpeedMs: 80]
-    CONFIG --> COMET_WIDTH[cometTrackWidth: 22]
+    CONFIG --> COMET_SPEED[cometSpeedMs: 45]
+    CONFIG --> COMET_WIDTH[cometTrackWidth: 10]
+    CONFIG --> TEXT_SPEED[textScanSpeedMs: 100]
     CONFIG --> COMET_GLYPHS[cometGlyphs: ["◆","●","•","∙","·"]]
     CONFIG --> COMET_COLORS[cometColors: ["#5CB8C7","#4EA0B2",...]]
     
@@ -282,7 +283,7 @@ graph TD
     classDef leaf fill:#0f3460,stroke:#5cb8c7,color:#fff
     classDef theme fill:#16213e,stroke:#ff1e44,color:#fff
     class CONFIG root
-    class USER,ICON,FLOWER,CTX_IDLE,COMET_EN,COMET_SPEED,COMET_WIDTH,COMET_GLYPHS,COMET_COLORS,WARN,CRIT,RESET,SPECTRUM leaf
+    class USER,ICON,FLOWER,CTX_IDLE,COMET_EN,COMET_SPEED,COMET_WIDTH,TEXT_SPEED,COMET_GLYPHS,COMET_COLORS,WARN,CRIT,RESET,SPECTRUM leaf
     class THEME,BORDER,USER_C,FLOWER_C,SEP,LABEL,EMPTY,PULSE_BASE,PULSE_PEAK theme
 ```
 

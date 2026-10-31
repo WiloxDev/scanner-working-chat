@@ -47,7 +47,7 @@ El badge superior se transforma en una consola de instrumentación fluida:
 │                                                                                 │
 ╰─────────────────────────────────────────────────────────────────────────────────╯
 ```
-* **Cometa de partículas (`◆●•∙··`):** Animación armónica continua a 80ms.
+* **Cometa de partículas (`◆●•∙··`):** Animación armónica continua a 45ms, sincronizada con la flor. El barrido de luz del texto usa su propio ritmo (`textScanSpeedMs`, 100ms).
 * **Cronómetro `[3.2s]`:** Duración acumulada del turno en curso.
 * **Medidor Térmico:** Gradiente suave de 8 celdas que vira de Verde $\rightarrow$ Lima $\rightarrow$ Ámbar $\rightarrow$ Naranja $\rightarrow$ Rojo.
 
@@ -130,8 +130,9 @@ Todo aspecto visual es 100% configurable mediante un archivo JSON sencillo en tu
   "showWorkingDuration": true,
   "showContextInIdle": true,
   "enableComet": true,
-  "cometSpeedMs": 80,
-  "cometTrackWidth": 22,
+  "cometSpeedMs": 45,
+  "textScanSpeedMs": 100,
+  "cometTrackWidth": 10,
   "warningThreshold": 70,
   "criticalThreshold": 90,
   "resetThreshold": 15,

@@ -37,6 +37,7 @@ export interface ScannerChatConfig {
 	showContextInIdle: boolean;
 	enableComet: boolean;
 	cometSpeedMs: number;
+	textScanSpeedMs: number;
 	cometTrackWidth: number;
 	cometGlyphs: string[];
 	cometColors: [number, number, number][];
@@ -118,6 +119,7 @@ export function buildDefaultConfig(terminal: TerminalProfile = detectTerminalPro
 		showContextInIdle: true,
 		enableComet: true,
 		cometSpeedMs: 45,
+		textScanSpeedMs: 100,
 		cometTrackWidth: 10,
 		cometGlyphs: [...terminal.recommendedCometGlyphs],
 		cometColors: [...DEFAULT_COMET_COLORS],
@@ -192,7 +194,7 @@ export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<
 	}
 
 	// Validate numbers
-	for (const key of ["cometSpeedMs", "cometTrackWidth", "warningThreshold", "criticalThreshold", "resetThreshold"]) {
+	for (const key of ["cometSpeedMs", "textScanSpeedMs", "cometTrackWidth", "warningThreshold", "criticalThreshold", "resetThreshold"]) {
 		if (key in input) {
 			const val = Number(input[key]);
 			if (Number.isFinite(val) && val >= 0) {
@@ -372,6 +374,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 
 	const enableComet = envComet ?? overrides.enableComet ?? parsed.enableComet ?? baseDefaults.enableComet;
 	const cometSpeedMs = overrides.cometSpeedMs ?? parsed.cometSpeedMs ?? baseDefaults.cometSpeedMs;
+	const textScanSpeedMs = overrides.textScanSpeedMs ?? parsed.textScanSpeedMs ?? baseDefaults.textScanSpeedMs;
 	const cometTrackWidth = overrides.cometTrackWidth ?? parsed.cometTrackWidth ?? baseDefaults.cometTrackWidth;
 	const warningThreshold = overrides.warningThreshold ?? parsed.warningThreshold ?? baseDefaults.warningThreshold;
 	const criticalThreshold = overrides.criticalThreshold ?? parsed.criticalThreshold ?? baseDefaults.criticalThreshold;
@@ -443,6 +446,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 		showContextInIdle,
 		enableComet,
 		cometSpeedMs,
+		textScanSpeedMs,
 		cometTrackWidth,
 		cometGlyphs,
 		cometColors,

@@ -4,6 +4,7 @@ import { isWorkingCometEnabled, renderWorkingComet, workingCometCycleLength } fr
 import { renderPromptContextMirror, type ContextMirrorTier } from "./shell-prompt-context-mirror.js";
 import { renderSyncFlower, scanWorkingText } from "./ScannerWorkingEditor.js";
 import type { ScannerChatConfig } from "./config.js";
+import { DEFAULT_CONFIG } from "./config.js";
 import type { SpectrumConfig } from "./shell-prompt-context-mirror.js";
 
 export interface WorkingIndicator {
@@ -27,6 +28,37 @@ export interface WorkingTopBorderOptions {
 	currentTimestamp?: number;
 	compactionCount?: number;
 	username?: string;
+}
+
+export interface WorkingTiming {
+	cometTick: number;
+	textTick: number;
+	renderIntervalMs: number;
+}
+
+const MIN_EFFECT_SPEED_MS = 10;
+const MIN_RENDER_INTERVAL_MS = 25;
+
+function effectSpeedMs(configured: number | undefined, fallback: number): number {
+	return Math.max(MIN_EFFECT_SPEED_MS, configured || fallback || MIN_EFFECT_SPEED_MS);
+}
+
+/**
+ * Single source of truth for working-state animation timing.
+ * The comet/flower cycle and the text scan advance at their own configured speeds,
+ * while `renderIntervalMs` guarantees the redraw cadence still samples the fastest one.
+ */
+export function deriveWorkingTiming(elapsedMs: number, config: ScannerChatConfig, frozen = false): WorkingTiming {
+	const cometSpeed = effectSpeedMs(config.cometSpeedMs, DEFAULT_CONFIG.cometSpeedMs);
+	const textSpeed = effectSpeedMs(config.textScanSpeedMs, DEFAULT_CONFIG.textScanSpeedMs);
+	const renderIntervalMs = Math.max(MIN_RENDER_INTERVAL_MS, Math.min(cometSpeed, textSpeed));
+	if (frozen) return { cometTick: 0, textTick: 0, renderIntervalMs };
+	const safeElapsed = Math.max(0, elapsedMs);
+	return {
+		cometTick: Math.floor(safeElapsed / cometSpeed),
+		textTick: Math.floor(safeElapsed / textSpeed),
+		renderIntervalMs,
+	};
 }
 
 export function formatDurationBadge(elapsedMs: number): string {
@@ -61,6 +93,10 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 
 	const wsi = workingIndicator;
 	const cycleLength = workingCometCycleLength(config.cometTrackWidth, config.cometGlyphs.length);
+	const elapsedMs = (workingStartTime && workingStartTime > 0)
+		? Math.max(0, currentTimestamp - workingStartTime)
+		: 0;
+	const timing = deriveWorkingTiming(elapsedMs, config, Boolean(config.zenMode || options.isWaiting));
 	let status = "";
 
 	const rawStatus =
@@ -69,11 +105,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 		"";
 
 	if (embedWorkingStatus && rawStatus) {
-		const elapsedMs = (workingStartTime && workingStartTime > 0)
-			? Math.max(0, currentTimestamp - workingStartTime)
-			: 0;
-		const speed = Math.max(10, config.cometSpeedMs || 80);
-		const tick = (config.zenMode || options.isWaiting) ? 0 : Math.floor(elapsedMs / speed);
+		const tick = timing.cometTick;
 
 		if (rawStatus) {
 			const comet = (!config.zenMode && !options.isWaiting && config.enableComet && isWorkingCometEnabled())
@@ -141,8 +173,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 
 			// Text scan effect or static text in Zen mode
 			const label = cleanStatusLabel(rawStatus);
-			const textTick = options.isWaiting ? 0 : Math.floor(elapsedMs / 100);
-			const scannedText = config.zenMode ? label : scanWorkingText(label, textTick);
+			const scannedText = config.zenMode ? label : scanWorkingText(label, timing.textTick);
 
 			const [sr, sg, sb] = config.colors.separatorColor;
 			const SEPARATOR = ` \x1b[38;2;${sr};${sg};${sb}m│\x1b[0m `;
@@ -170,8 +201,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 
 			// 2. Duration badge: [X.Xs]
 			if (config.showWorkingDuration && workingStartTime && workingStartTime > 0) {
-				const elapsed = Math.max(0, currentTimestamp - workingStartTime);
-				const durationLabel = formatDurationBadge(elapsed);
+				const durationLabel = formatDurationBadge(elapsedMs);
 				const [lr, lg, lb] = config.colors.labelColor;
 				mainChainParts.push(`\x1b[38;2;${lr};${lg};${lb}m${durationLabel}\x1b[0m`);
 			}
@@ -208,12 +238,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 	const fallbackSpinner = () =>
 		config.zenMode || options.isWaiting
 			? `\x1b[38;2;${config.colors.flowerColor[0]};${config.colors.flowerColor[1]};${config.colors.flowerColor[2]}m${config.flowerIcon}\x1b[0m`
-			: renderSyncFlower(
-				config.zenMode ? 0 : Math.floor(Math.max(0, currentTimestamp - (workingStartTime || 0)) / Math.max(10, config.cometSpeedMs || 80)),
-				config.flowerIcon,
-				config.colors.flowerColor,
-				cycleLength,
-			);
+			: renderSyncFlower(timing.cometTick, config.flowerIcon, config.colors.flowerColor, cycleLength);
 
 	if (overflowLabel && !canFitOverflow()) {
 		currentStatus = wsi?.renderSpinnerInBorder?.(width) ?? fallbackSpinner();

@@ -17,7 +17,7 @@ import {
 	type SpectrumConfig,
 } from "./shell-prompt-context-mirror.js";
 import { renderIdleTopBorder } from "./shell-idle-badge.js";
-import { renderWorkingTopBorder, type WorkingIndicator } from "./shell-working-top-border.js";
+import { renderWorkingTopBorder, deriveWorkingTiming, type WorkingIndicator } from "./shell-working-top-border.js";
 import { type ScannerChatConfig, DEFAULT_CONFIG } from "./config.js";
 
 const FLOWER_FRAMES = ["✿", "❀", "❁", "✾"] as const;
@@ -215,14 +215,17 @@ export class ScannerWorkingEditor extends CustomEditor {
 		const needsCustomTimer = this.isAgentActive || this.transitionUntil !== null;
 
 		if (needsCustomTimer && !this.animationTimer && !this.isDisposed) {
-			const intervalMs = Math.max(25, this.config.cometSpeedMs || 45);
+			const elapsedMs = this.workingStartTime && this.workingStartTime > 0
+				? Math.max(0, Date.now() - this.workingStartTime)
+				: 0;
+			const { renderIntervalMs } = deriveWorkingTiming(elapsedMs, this.config);
 			this.animationTimer = setInterval(() => {
 				if (this.isDisposed) {
 					this.stopAnimationTimer();
 					return;
 				}
 				this.tui.requestRender();
-			}, intervalMs);
+			}, renderIntervalMs);
 		} else if (!needsCustomTimer && this.animationTimer) {
 			this.stopAnimationTimer();
 		}

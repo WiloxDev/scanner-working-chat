@@ -237,6 +237,31 @@ export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<
 }
 
 export function persistUserConfigPatch(patch: Record<string, any>): void {
+	const explicitPath = process.env.SCANNER_CHAT_CONFIG;
+	if (explicitPath) {
+		try {
+			let currentExplicit: any = {};
+			if (existsSync(explicitPath)) {
+				try {
+					currentExplicit = JSON.parse(readFileSync(explicitPath, "utf8")) || {};
+				} catch {
+					currentExplicit = {};
+				}
+			}
+			if (currentExplicit.scanner) {
+				currentExplicit.scanner = { ...currentExplicit.scanner, ...patch };
+			} else {
+				Object.assign(currentExplicit, patch);
+			}
+			const tempExplicit = `${explicitPath}.${randomUUID()}.tmp`;
+			writeFileSync(tempExplicit, JSON.stringify(currentExplicit, null, 2) + "\n", { mode: 0o600 });
+			renameSync(tempExplicit, explicitPath);
+		} catch (err) {
+			console.warn(`[scanner-working-chat] Error en persistencia explícita (${explicitPath}):`, err);
+		}
+		return;
+	}
+
 	const unifiedPath = getWiloxUnifiedConfigPath();
 	const unifiedDir = join(homedir(), ".config", "wiloxdev");
 	const legacyPath = getLegacyScannerConfigPath();
@@ -297,17 +322,19 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 	let configValidationErrors: string[] = [];
 
 	// Prioridad 1: Si hay ruta explícita (testing o override de entorno)
-	if (explicitPath && existsSync(explicitPath)) {
-		try {
-			const raw = readFileSync(explicitPath, "utf8");
-			const parsedJson = JSON.parse(raw);
-			// Si es un archivo unificado con clave .scanner
-			const targetData = parsedJson?.scanner ? parsedJson.scanner : parsedJson;
-			const validation = validateAndSanitizeConfig(targetData);
-			parsed = validation.sanitized;
-			configValidationErrors = validation.errors;
-		} catch (err) {
-			configValidationErrors = [`Failed to read or parse ${explicitPath}: ${err instanceof Error ? err.message : String(err)}`];
+	if (explicitPath) {
+		if (existsSync(explicitPath)) {
+			try {
+				const raw = readFileSync(explicitPath, "utf8");
+				const parsedJson = JSON.parse(raw);
+				// Si es un archivo unificado con clave .scanner
+				const targetData = parsedJson?.scanner ? parsedJson.scanner : parsedJson;
+				const validation = validateAndSanitizeConfig(targetData);
+				parsed = validation.sanitized;
+				configValidationErrors = validation.errors;
+			} catch (err) {
+				configValidationErrors = [`Failed to read or parse ${explicitPath}: ${err instanceof Error ? err.message : String(err)}`];
+			}
 		}
 	} else {
 		// Prioridad 2: Almacén unificado POSIX ~/.config/wiloxdev/settings.json

@@ -3,15 +3,16 @@ import { loadConfig, persistUserConfigPatch, type ScannerChatConfig } from "./co
 import { ScannerWorkingEditor } from "./ScannerWorkingEditor.js";
 import { registerChatScannerModule } from "./wilox-community.js";
 
+const PROMPT_OWNER = Symbol.for("gentle-pi.prompt-owner");
+const SCANNER_EDITOR_OWNER = Symbol.for("scanner-working-chat.owner");
+
 /**
  * Entry point for Gentle-Pi and Gentle-Shell extension runtime.
  */
 export default function activate(pi: ExtensionAPI): void {
 	let config: ScannerChatConfig = loadConfig();
-	if (config.enabled === false) {
-		return;
-	}
 
+	let hostEditorFactory: any = null;
 	let currentEditor: ScannerWorkingEditor | null = null;
 	let sessionIsAgentActive = false;
 	let sessionWorkingStartTime: number | null = null;
@@ -22,20 +23,39 @@ export default function activate(pi: ExtensionAPI): void {
 			return;
 		}
 
+		// Capture the host editor factory (e.g. GentlePromptEditor) if not already captured and not ourselves
+		const currentFactory = typeof ctx.ui?.getEditorComponent === "function" ? ctx.ui.getEditorComponent() : undefined;
+		if (currentFactory && !currentFactory[SCANNER_EDITOR_OWNER]) {
+			hostEditorFactory = currentFactory;
+		}
+
 		if (!config.enabled) {
 			if (currentEditor) {
 				currentEditor.dispose();
 				currentEditor = null;
 			}
 			try {
-				ctx.ui.setEditorComponent(undefined);
-				ctx.ui.setWorkingVisible(true);
-			} catch {}
+				if (hostEditorFactory) {
+					ctx.ui.setEditorComponent(hostEditorFactory);
+					// If the host is Gentle Shell (PROMPT_OWNER), keep native working row hidden
+					// so Gentle Shell's own flower/petal indicator and status take over smoothly
+					if (hostEditorFactory[PROMPT_OWNER]) {
+						ctx.ui.setWorkingVisible?.(false);
+					} else {
+						ctx.ui.setWorkingVisible?.(true);
+					}
+				} else {
+					ctx.ui.setEditorComponent(undefined);
+					ctx.ui.setWorkingVisible?.(true);
+				}
+			} catch (err) {
+				console.error("[scanner-working-chat] Failed to restore host prompt editor:", err);
+			}
 			return;
 		}
 
 		try {
-			ctx.ui.setEditorComponent((tui: any, theme: any, keybindings: any) => {
+			const factory: any = (tui: any, theme: any, keybindings: any) => {
 				if (currentEditor) {
 					currentEditor.dispose();
 				}
@@ -44,7 +64,10 @@ export default function activate(pi: ExtensionAPI): void {
 					currentEditor.setAgentActive(true, sessionWorkingStartTime ?? undefined);
 				}
 				return currentEditor;
-			});
+			};
+			factory[SCANNER_EDITOR_OWNER] = true;
+			ctx.ui.setEditorComponent(factory);
+			ctx.ui.setWorkingVisible?.(false);
 		} catch (err) {
 			console.error("[scanner-working-chat] Failed to install custom prompt editor:", err);
 		}
@@ -206,6 +229,7 @@ export default function activate(pi: ExtensionAPI): void {
 			currentEditor.dispose();
 			currentEditor = null;
 		}
+		hostEditorFactory = null;
 		sessionIsAgentActive = false;
 		sessionWorkingStartTime = null;
 	});

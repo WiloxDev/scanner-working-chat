@@ -8,7 +8,7 @@ import {
 import { loadConfig } from "../src/config.js";
 
 test("wilox-community module registers cleanly in global registry bus", () => {
-	const dummyConfig = loadConfig();
+	const dummyConfig = { ...loadConfig(), enabled: true };
 	let notifiedConfig: any = null;
 
 	registerChatScannerModule(

@@ -142,24 +142,30 @@ export function buildDefaultConfig(terminal: TerminalProfile = detectTerminalPro
 
 export const DEFAULT_CONFIG: ScannerChatConfig = buildDefaultConfig();
 
+/**
+ * Input shape for user overrides. Colors here are hex strings (what people write in JSON),
+ * not the resolved [r,g,b] tuples in ScannerChatConfig — that would be an unsatisfiable type.
+ */
+export type ScannerChatConfigOverrides = Omit<Partial<ScannerChatConfig>, "cometColors" | "spectrumColors"> & {
+	theme?: {
+		borderColor?: string;
+		userNameColor?: string;
+		flowerColor?: string;
+		separatorColor?: string;
+		labelColor?: string;
+		emptyCellColor?: string;
+		neonRedPulseBase?: string;
+		neonRedPulsePeak?: string;
+	};
+	cometGlyphs?: string[];
+	cometColors?: string[];
+	spectrumColors?: string[];
+};
+
 export interface LoadConfigOptions {
 	configPath?: string;
 	terminal?: TerminalProfile;
-	overrides?: Partial<ScannerChatConfig> & {
-		theme?: {
-			borderColor?: string;
-			userNameColor?: string;
-			flowerColor?: string;
-			separatorColor?: string;
-			labelColor?: string;
-			emptyCellColor?: string;
-			neonRedPulseBase?: string;
-			neonRedPulsePeak?: string;
-		};
-		cometGlyphs?: string[];
-		cometColors?: string[];
-		spectrumColors?: string[];
-	};
+	overrides?: ScannerChatConfigOverrides;
 }
 
 export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<string, any>; errors: string[] } {

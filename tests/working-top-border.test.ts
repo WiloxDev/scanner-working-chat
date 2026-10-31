@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { deriveWorkingTiming, renderWorkingTopBorder } from "../src/shell-working-top-border.ts";
-import { loadConfig, DEFAULT_CONFIG } from "../src/config.ts";
+import { loadConfig, DEFAULT_CONFIG, type ScannerChatConfigOverrides } from "../src/config.ts";
 import { scanWorkingText } from "../src/ScannerWorkingEditor.ts";
 
 function createBorderColor(config: typeof DEFAULT_CONFIG) {
@@ -10,7 +10,7 @@ function createBorderColor(config: typeof DEFAULT_CONFIG) {
 	return (text: string) => `\x1b[38;2;${br};${bg};${bb}m${text}\x1b[0m`;
 }
 
-function createMockConfig(overrides: Partial<typeof DEFAULT_CONFIG> = {}) {
+function createMockConfig(overrides: ScannerChatConfigOverrides = {}) {
 	return loadConfig({
 		configPath: "/tmp/non-existent.json",
 		overrides: {

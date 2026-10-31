@@ -288,6 +288,7 @@ export class ScannerWorkingEditor extends CustomEditor {
 				workingStartTime: this.workingStartTime,
 				currentTimestamp: now,
 				compactionCount: this.compactionCount,
+				username: this.config.username,
 			});
 		}
 
@@ -313,6 +314,7 @@ export class ScannerWorkingEditor extends CustomEditor {
 					workingStartTime: this.workingStartTime,
 					currentTimestamp: now,
 					compactionCount: this.compactionCount,
+					username: this.config.username,
 				});
 			}
 			this.workingStartTime = null;

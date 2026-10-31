@@ -168,8 +168,23 @@ export default function activate(pi: ExtensionAPI): void {
 					return statusMsg;
 				}
 
+				if (sub === "identity" || sub === "user") {
+					config.showWorkingIdentity = !config.showWorkingIdentity;
+					if (currentEditor) {
+						currentEditor.config = { ...config };
+						(currentEditor as any).tui?.requestRender();
+					}
+					persistUserConfigPatch({ showWorkingIdentity: config.showWorkingIdentity });
+					const statusMsg = config.showWorkingIdentity
+						? `👤 Firma de usuario '${config.username}' ACTIVADA en modo working`
+						: "👤 Firma de usuario OCULTA en modo working";
+					ctx?.ui?.notify?.(statusMsg, "info");
+					return statusMsg;
+				}
+
 				return "Comandos disponibles de /scanner:\n" +
 					"  /scanner name <nombre>  - Cambiar tu nombre de badge (Ej: /scanner name Wilox)\n" +
+					"  /scanner identity       - Ocultar o mostrar firma de usuario en modo working\n" +
 					"  /scanner ctx            - Ocultar o mostrar medidor de contexto (Ctx / Context [■■□□])\n" +
 					"  /scanner time           - Ocultar o mostrar badge de tiempo transcurrido [3.4s]\n" +
 					"  /scanner comp           - Ocultar o mostrar contador de compactaciones 󰁨×n\n" +

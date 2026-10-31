@@ -26,6 +26,7 @@ export interface WorkingTopBorderOptions {
 	workingStartTime?: number | null;
 	currentTimestamp?: number;
 	compactionCount?: number;
+	username?: string;
 }
 
 export function formatDurationBadge(elapsedMs: number): string {
@@ -144,9 +145,26 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 			const [sr, sg, sb] = config.colors.separatorColor;
 			const SEPARATOR = ` \x1b[38;2;${sr};${sg};${sb}m│\x1b[0m `;
 
+			// 0. User identity badge (󰣇 Wilox ✿) if enabled
+			const resolvedUsername = options.username || config.username;
+			let userBadge = "";
+			if (config.showWorkingIdentity && resolvedUsername) {
+				const [br, bg, bb] = config.colors.borderColor;
+				const [ur, ug, ub] = config.colors.userNameColor;
+				const iconStr = config.userIcon ? `\x1b[38;2;${br};${bg};${bb}m${config.userIcon}\x1b[0m ` : "";
+				const userStr = `\x1b[1;38;2;${ur};${ug};${ub}m${resolvedUsername}\x1b[0m`;
+				const flowerStr = `\x1b[38;2;${br};${bg};${bb}m${config.flowerIcon}\x1b[0m`;
+				userBadge = `${iconStr}${userStr} ${flowerStr}`;
+			}
+
 			// 1. Comet + space + Flower + space + action text
 			const actionSection = `${comet ? `${comet}  ` : ""}${flower} ${scannedText}`;
-			const mainChainParts: string[] = [actionSection];
+			const mainChainParts: string[] = [];
+
+			if (userBadge) {
+				mainChainParts.push(userBadge);
+			}
+			mainChainParts.push(actionSection);
 
 			// 2. Duration badge: [X.Xs]
 			if (config.showWorkingDuration && workingStartTime && workingStartTime > 0) {

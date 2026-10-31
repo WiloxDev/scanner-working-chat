@@ -36,18 +36,19 @@ function createMockWorkingIndicator() {
 	};
 }
 
-test("working-top-border: sequence is contiguous: action -> duration -> compaction -> context", () => {
+test("working-top-border: sequence is contiguous: identity -> action -> duration -> compaction -> context", () => {
 	const config = createMockConfig({
 		enableComet: true,
 		showWorkingDuration: true,
 		showCompactionCount: true,
+		showWorkingIdentity: true,
 	});
 	const borderColor = createBorderColor(config);
 	const ctx = createMockContext(48);
 	const wsi = createMockWorkingIndicator();
 
 	const result = renderWorkingTopBorder({
-		width: 120,
+		width: 140,
 		hiddenLineCount: 0,
 		config,
 		embedWorkingStatus: true,
@@ -61,23 +62,26 @@ test("working-top-border: sequence is contiguous: action -> duration -> compacti
 
 	const clean = stripTerminalSequences(result);
 	// Check order of appearance
+	const idxUser = clean.indexOf("Wilox");
 	const idxWorking = clean.indexOf("working…");
 	const idxDuration = clean.indexOf("[3.5s]");
 	const idxCompaction = clean.indexOf("×2");
 	const idxContext = clean.indexOf("Context");
 
+	assert.ok(idxUser !== -1, "username found");
 	assert.ok(idxWorking !== -1, "working label found");
 	assert.ok(idxDuration !== -1, "duration badge found");
 	assert.ok(idxCompaction !== -1, "compaction badge found");
 	assert.ok(idxContext !== -1, "context mirror found");
 
+	assert.ok(idxUser < idxWorking, "Identity must appear before action");
 	assert.ok(idxWorking < idxDuration, "Action must appear before duration");
 	assert.ok(idxDuration < idxCompaction, "Duration must appear before compaction");
 	assert.ok(idxCompaction < idxContext, "Compaction must appear immediately before Context");
 });
 
-test("working-top-border: does not show username in working state", () => {
-	const config = createMockConfig();
+test("working-top-border: hides username in working state when showWorkingIdentity is false", () => {
+	const config = createMockConfig({ showWorkingIdentity: false });
 	const borderColor = createBorderColor(config);
 	const ctx = createMockContext(55);
 	const wsi = createMockWorkingIndicator();
@@ -94,7 +98,7 @@ test("working-top-border: does not show username in working state", () => {
 	});
 
 	const clean = stripTerminalSequences(result);
-	assert.ok(!clean.includes("Wilox"), `User name should not appear during working: ${clean}`);
+	assert.ok(!clean.includes("Wilox"), `User name should not appear when showWorkingIdentity is false: ${clean}`);
 });
 
 test("working-top-border: shows comet when enabled", () => {

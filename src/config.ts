@@ -27,6 +27,7 @@ export interface ScannerChatConfig {
 	enabled: boolean;
 	zenMode: boolean;
 	showWorkingDuration: boolean;
+	showWorkingIdentity: boolean;
 	showCompactionCount: boolean;
 	showWorkingContext: boolean;
 	compactionIcon: string;
@@ -107,6 +108,7 @@ export function buildDefaultConfig(terminal: TerminalProfile = detectTerminalPro
 		enabled: true,
 		zenMode: false,
 		showWorkingDuration: true,
+		showWorkingIdentity: true,
 		showCompactionCount: true,
 		showWorkingContext: true,
 		compactionIcon: terminal.recommendedCompactionIcon,
@@ -168,7 +170,7 @@ export function validateAndSanitizeConfig(rawObj: unknown): { sanitized: Record<
 	const sanitized: Record<string, any> = {};
 
 	// Validate booleans
-	for (const key of ["enabled", "zenMode", "showWorkingDuration", "showCompactionCount", "showWorkingContext", "showContextInIdle", "enableComet"]) {
+	for (const key of ["enabled", "zenMode", "showWorkingDuration", "showWorkingIdentity", "showCompactionCount", "showWorkingContext", "showContextInIdle", "enableComet"]) {
 		if (key in input) {
 			if (typeof input[key] === "boolean") {
 				sanitized[key] = input[key];
@@ -356,6 +358,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 	const enabled = overrides.enabled ?? parsed.enabled ?? baseDefaults.enabled;
 	const zenMode = overrides.zenMode ?? parsed.zenMode ?? baseDefaults.zenMode;
 	const showWorkingDuration = overrides.showWorkingDuration ?? parsed.showWorkingDuration ?? baseDefaults.showWorkingDuration;
+	const showWorkingIdentity = overrides.showWorkingIdentity ?? parsed.showWorkingIdentity ?? baseDefaults.showWorkingIdentity;
 	const showCompactionCount = overrides.showCompactionCount ?? parsed.showCompactionCount ?? baseDefaults.showCompactionCount;
 	const showWorkingContext = overrides.showWorkingContext ?? parsed.showWorkingContext ?? baseDefaults.showWorkingContext;
 	const showContextInIdle = overrides.showContextInIdle ?? parsed.showContextInIdle ?? baseDefaults.showContextInIdle;
@@ -430,6 +433,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ScannerChatConfig {
 		enabled,
 		zenMode,
 		showWorkingDuration,
+		showWorkingIdentity,
 		showCompactionCount,
 		showWorkingContext,
 		compactionIcon,

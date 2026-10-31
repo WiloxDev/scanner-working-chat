@@ -76,6 +76,7 @@ test("editor: renders top border in IDLE with identity and context", () => {
 	assert.ok(clean.endsWith("╮"), `Top border line should end with '╮': ${clean}`);
 	assert.ok(clean.includes("󰣇 Wilox ✿"), `Top border should contain user badge: ${clean}`);
 	assert.ok(clean.includes("Ctx: 18%"), `Top border should contain context badge: ${clean}`);
+	editor.dispose();
 });
 
 test("editor: renders top border in WORKING state", () => {
@@ -106,12 +107,13 @@ test("editor: renders top border in WORKING state", () => {
 	const top = (editor as any).renderTopBorder(100, 0);
 	const clean = stripTerminalSequences(top);
 
-	// In working state, user name disappears and working instrumentation appears
-	assert.ok(!clean.includes("Wilox"), `User name should not appear during working: ${clean}`);
+	// In working state, user identity and working instrumentation appear
+	assert.ok(clean.includes("Wilox"), `User name should appear during working when showWorkingIdentity is enabled: ${clean}`);
 	assert.ok(clean.includes("working…"), `Should contain working label: ${clean}`);
 	assert.ok(clean.includes("Context"), `Should contain context gauge: ${clean}`);
 	assert.ok(clean.includes("55%"), `Should contain percentage: ${clean}`);
 	assert.ok(clean.includes("│"), `Should contain vertical separator: ${clean}`);
+	editor.dispose();
 });
 
 test("editor: elastic degeneration handles narrow terminals without breaking", () => {
@@ -139,6 +141,7 @@ test("editor: elastic degeneration handles narrow terminals without breaking", (
 	assert.equal(visibleWidth(clean), narrowWidth, `Width must strictly match ${narrowWidth}`);
 	assert.ok(clean.startsWith("╭"), "Must start with ╭");
 	assert.ok(clean.endsWith("╮"), "Must end with ╮");
+	editor.dispose();
 });
 
 test("editor: elapsed-time animation and smooth transition", () => {
@@ -205,7 +208,7 @@ test("editor: renders working border when agent is active even if working indica
 	const top = (editor as any).renderTopBorder(100, 0);
 	const clean = stripTerminalSequences(top);
 
-	assert.ok(!clean.includes("Wilox"), `User name should not appear during working: ${clean}`);
+	assert.ok(clean.includes("Wilox"), `User name should appear during working when showWorkingIdentity is enabled: ${clean}`);
 	assert.ok(clean.includes("working…"), `Should contain fallback working status: ${clean}`);
 	assert.ok(clean.includes("Context"), `Should contain context gauge: ${clean}`);
 	assert.ok(clean.includes("42%"), `Should contain percentage: ${clean}`);
@@ -256,11 +259,6 @@ test("editor: manages animation timer cleanly for comet animation", () => {
 		setIndicator: () => {},
 	});
 	assert.notEqual((editor as any).animationTimer, null, "Timer should persist when indicator is set");
-
-	// Agent settles -> timer STOPS after transition
-	editor.setAgentActive(false);
-	// Wait for transition (200ms) + small buffer
-	setTimeout(() => {}, 250);
 
 	// Dispose cleanly cleans up timer
 	editor.dispose();

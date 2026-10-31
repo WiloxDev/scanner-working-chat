@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { writeFileSync, unlinkSync } from "node:fs";
 import activate from "../src/index.ts";
-import { COMMUNITY_REGISTRY_SLOT } from "../src/wilox-community.ts";
+import { COMMUNITY_REGISTRY_SLOT, type WiloxCommunityModule } from "../src/wilox-community.ts";
 
 const PROMPT_OWNER = Symbol.for("gentle-pi.prompt-owner");
 const TEST_CONFIG_PATH = "/tmp/test-scanner-lifecycle-config.json";
@@ -119,7 +119,7 @@ test("lifecycle: preserves and restores host editor factory on disable", async (
 		assert.equal(mockEnv.getWorkingVisible(), false, "Working visibility should be false under scanner editor");
 
 		// Now simulate user toggling Prompt Scanner to [OFF] in /gentle:customize
-		const registeredModule = bus.get("chat-scanner")!;
+		const registeredModule = (bus.get("chat-scanner") as WiloxCommunityModule);
 		assert.ok(registeredModule, "Module must be registered in WiloxDev bus");
 		const statusRow = registeredModule.rows.find((r) => r.id === "scanner-status")!;
 		statusRow.action(); // Toggles enabled to false and triggers onConfigChanged
@@ -154,7 +154,7 @@ test("lifecycle: falls back to undefined and workingVisible:true when no host ed
 		pi.emit("session_start", mockEnv.ctx);
 
 		// Turn off scanner via community status row action
-		const registeredModule = bus.get("chat-scanner")!;
+		const registeredModule = (bus.get("chat-scanner") as WiloxCommunityModule);
 		assert.ok(registeredModule);
 		const statusRow = registeredModule.rows.find((r) => r.id === "scanner-status")!;
 		statusRow.action(); // Toggles enabled to false
@@ -184,7 +184,7 @@ test("lifecycle: registers in community bus on startup even when enabled is fals
 
 		activate(pi as any);
 
-		const registeredModule = bus.get("chat-scanner")!;
+		const registeredModule = (bus.get("chat-scanner") as WiloxCommunityModule);
 		assert.ok(registeredModule, "Must register in WiloxDev bus even when starting with enabled:false");
 		assert.equal(registeredModule.rows.length, 1, "Only status row visible when disabled");
 		assert.ok(registeredModule.rows[0].label().includes("[OFF]"));
@@ -222,7 +222,7 @@ test("lifecycle: handles multiple consecutive on/off toggles idempotently withou
 		activate(pi as any);
 		pi.emit("session_start", mockEnv.ctx);
 
-		const registeredModule = bus.get("chat-scanner")!;
+		const registeredModule = (bus.get("chat-scanner") as WiloxCommunityModule);
 		assert.ok(registeredModule);
 		const scannerFactory = mockEnv.getFactory();
 		assert.notEqual(scannerFactory, gentlePromptFactory);
@@ -280,7 +280,7 @@ test("lifecycle: session_shutdown clears memory and resets state cleanly", async
 		assert.notEqual(secondMockEnv.getFactory(), secondHostFactory);
 
 		// Toggle OFF in second session: should restore secondHostFactory, NOT the previous session's host factory
-		const registeredModule = bus.get("chat-scanner")!;
+		const registeredModule = (bus.get("chat-scanner") as WiloxCommunityModule);
 		registeredModule.rows.find((r) => r.id === "scanner-status")!.action();
 		assert.equal(secondMockEnv.getFactory(), secondHostFactory, "Must restore the current session's host factory");
 	} finally {

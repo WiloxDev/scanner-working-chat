@@ -49,117 +49,142 @@ export function registerChatScannerModule(
 		order: 20,
 		summary: () => {
 			const c = getConfig();
-			return `${c.username} · ${c.zenMode ? "Zen Mode" : "Dynamic"}`;
+			return `${c.enabled ? "Active" : "Disabled"} · ${c.username} · ${c.zenMode ? "Zen" : "Dynamic"}`;
 		},
-		rows: [
-			{
-				id: "scanner-badge-name",
-				label: () => {
-					const c = getConfig();
-					return `Badge Identity: [${c.username}] ➔ Enter to change`;
-				},
+		get rows() {
+			const c = getConfig();
+			const statusRow: WiloxCommunityRow = {
+				id: "scanner-status",
+				label: () => `Prompt Scanner: [${getConfig().enabled ? "ON" : "OFF"}]`,
 				preview: () => {
-					const c = getConfig();
+					const cfg = getConfig();
 					return {
-						title: "Chat Scanner · Badge Identity",
-						sample: `[IDLE] ╭─ 󰣇 ${c.username} ✿  󰣇 Ctx: 24% [ 󰁨×1 ] ─────────────────────────────────────────╮`,
+						title: "Chat Scanner · Master Status",
+						sample: cfg.enabled
+							? "[ACTIVE] Control activo de la barra de chat con escáner cinético y cometa."
+							: "[OFF] Barra nativa de Gentle Shell activa. Scanner en reposo.",
 					};
 				},
-				action: async (inline?: any) => {
-					const c = getConfig();
-					if (inline && typeof inline.input === "function") {
-						const inputName = await inline.input({ prompt: "Badge Identity", value: c.username });
-						if (inputName && inputName.trim()) {
-							applyPatchAndNotify({ username: inputName.trim() });
+				action: () => {
+					const cfg = getConfig();
+					applyPatchAndNotify({ enabled: !cfg.enabled });
+				},
+			};
+
+			// Si Prompt Scanner está apagado, ocultar todas las opciones hijas
+			if (!c.enabled) {
+				return [statusRow];
+			}
+
+			return [
+				statusRow,
+				{
+					id: "scanner-badge-name",
+					label: () => {
+						const cfg = getConfig();
+						return `Badge Identity: [${cfg.username}]`;
+					},
+					preview: () => {
+						const cfg = getConfig();
+						return {
+							title: "Chat Scanner · Badge Identity",
+							sample: `[IDLE] ╭─ 󰣇 ${cfg.username} ✿  󰣇 Ctx: 24% [ 󰁨×1 ] ─────────────────────────────────────────╮\nFirma visual mostrada en el borde superior en modo reposo.`,
+						};
+					},
+					action: async (inline?: any) => {
+						const cfg = getConfig();
+						if (inline && typeof inline.input === "function") {
+							const inputName = await inline.input({ prompt: "Badge Identity", value: cfg.username });
+							if (inputName && inputName.trim()) {
+								applyPatchAndNotify({ username: inputName.trim() });
+							}
+						} else {
+							const nextName = cfg.username === "Wilox" ? (process.env.HOSTNAME || "archlinux") : "Wilox";
+							applyPatchAndNotify({ username: nextName });
 						}
-					} else {
-						const nextName = c.username === "Wilox" ? (process.env.HOSTNAME || "archlinux") : "Wilox";
-						applyPatchAndNotify({ username: nextName });
-					}
+					},
 				},
-			},
-			{
-				id: "scanner-comet",
-				label: () => {
-					const c = getConfig();
-					return c.zenMode
-						? "Working Comet: [OFF · Zen Mode] ➔ Enter to enable"
-						: "Working Comet: [ON · 10 cols forward LTR] ➔ Enter to disable";
+				{
+					id: "scanner-comet",
+					label: () => {
+						const cfg = getConfig();
+						return `Working Comet: [${cfg.zenMode ? "OFF" : "ON"}]`;
+					},
+					preview: () => ({
+						title: "Chat Scanner · Working Comet",
+						sample: `[WORKING] ╭── ◆●•∙·  ✿ exploring… │ [2.8s] │ 󰁨×1 │ Context ▰▰▱▱▱▱▱▱ 24% ──────╮\nCometa cinético LTR de 10 columnas en ejecuciones activas.`,
+					}),
+					action: () => {
+						const cfg = getConfig();
+						applyPatchAndNotify({ zenMode: !cfg.zenMode });
+					},
 				},
-				preview: () => ({
-					title: "Chat Scanner · Working Comet",
-					sample: `[WORKING] ╭── ◆●•∙·  ✿ exploring… │ [2.8s] │ 󰁨×1 │ Context ▰▰▱▱▱▱▱▱ 24% ──────╮`,
-				}),
-				action: () => {
-					const c = getConfig();
-					applyPatchAndNotify({ zenMode: !c.zenMode });
+				{
+					id: "scanner-context",
+					label: () => {
+						const cfg = getConfig();
+						const show = cfg.showWorkingContext && cfg.showContextInIdle;
+						return `Context Gauge: [${show ? "Full" : "Hidden"}]`;
+					},
+					preview: () => ({
+						title: "Chat Scanner · Context Gauge",
+						sample: `[GAUGE] Muestra medidor cromático de 8 niveles en IDLE y WORKING.`,
+					}),
+					action: () => {
+						const cfg = getConfig();
+						const next = !(cfg.showWorkingContext && cfg.showContextInIdle);
+						applyPatchAndNotify({
+							showWorkingContext: next,
+							showContextInIdle: next,
+						});
+					},
 				},
-			},
-			{
-				id: "scanner-context",
-				label: () => {
-					const c = getConfig();
-					const show = c.showWorkingContext && c.showContextInIdle;
-					return `Context Gauge: [${show ? "Visible · Full" : "Hidden"}] ➔ Enter to toggle`;
+				{
+					id: "scanner-duration",
+					label: () => {
+						const cfg = getConfig();
+						return `Duration Badge: [${cfg.showWorkingDuration ? "ON" : "OFF"}]`;
+					},
+					preview: () => ({
+						title: "Chat Scanner · Duration Badge",
+						sample: `[DURATION] Tiempo de ejecución transcurrido [3.4s] en tareas activas.`,
+					}),
+					action: () => {
+						const cfg = getConfig();
+						applyPatchAndNotify({ showWorkingDuration: !cfg.showWorkingDuration });
+					},
 				},
-				preview: () => ({
-					title: "Chat Scanner · Context Gauge",
-					sample: `[GAUGE] Muestra medidor cromático de 8 niveles en IDLE y WORKING.`,
-				}),
-				action: () => {
-					const c = getConfig();
-					const next = !(c.showWorkingContext && c.showContextInIdle);
-					applyPatchAndNotify({
-						showWorkingContext: next,
-						showContextInIdle: next,
-					});
+				{
+					id: "scanner-compaction",
+					label: () => {
+						const cfg = getConfig();
+						return `Compaction Badge: [${cfg.showCompactionCount ? "ON" : "OFF"}]`;
+					},
+					preview: () => ({
+						title: "Chat Scanner · Compaction Badge",
+						sample: `[COMPACTION] Contador de compactaciones acumuladas de la sesión [󰁨×n].`,
+					}),
+					action: () => {
+						const cfg = getConfig();
+						applyPatchAndNotify({ showCompactionCount: !cfg.showCompactionCount });
+					},
 				},
-			},
-			{
-				id: "scanner-duration",
-				label: () => {
-					const c = getConfig();
-					return `Duration Badge: [${c.showWorkingDuration ? "Visible [3.4s]" : "Hidden"}] ➔ Enter to toggle`;
+				{
+					id: "scanner-zen",
+					label: () => {
+						const cfg = getConfig();
+						return `Zen Mode: [${cfg.zenMode ? "ON" : "OFF"}]`;
+					},
+					preview: () => ({
+						title: "Chat Scanner · Zen Mode",
+						sample: `[ZEN] Pausa cometas y texto cinético; estilo estático con 0% CPU.`,
+					}),
+					action: () => {
+						const cfg = getConfig();
+						applyPatchAndNotify({ zenMode: !cfg.zenMode });
+					},
 				},
-				preview: () => ({
-					title: "Chat Scanner · Duration Badge",
-					sample: `[DURATION] Muestra tiempo transcurrido en tiempo real en tareas activas.`,
-				}),
-				action: () => {
-					const c = getConfig();
-					applyPatchAndNotify({ showWorkingDuration: !c.showWorkingDuration });
-				},
-			},
-			{
-				id: "scanner-compaction",
-				label: () => {
-					const c = getConfig();
-					return `Compaction Badge: [${c.showCompactionCount ? "Visible [󰁨×n]" : "Hidden"}] ➔ Enter to toggle`;
-				},
-				preview: () => ({
-					title: "Chat Scanner · Compaction Badge",
-					sample: `[COMPACTION] Muestra contador acumulado de compactaciones en la sesión.`,
-				}),
-				action: () => {
-					const c = getConfig();
-					applyPatchAndNotify({ showCompactionCount: !c.showCompactionCount });
-				},
-			},
-			{
-				id: "scanner-zen",
-				label: () => {
-					const c = getConfig();
-					return `Zen Mode: [${c.zenMode ? "Active (Quiet)" : "Inactive (Dynamic)"}] ➔ Enter to toggle`;
-				},
-				preview: () => ({
-					title: "Chat Scanner · Zen Mode",
-					sample: `[ZEN] Pausa cometas y texto cinético; estilo minimalista y 0% uso de CPU.`,
-				}),
-				action: () => {
-					const c = getConfig();
-					applyPatchAndNotify({ zenMode: !c.zenMode });
-				},
-			},
-		],
+			];
+		},
 	});
 }

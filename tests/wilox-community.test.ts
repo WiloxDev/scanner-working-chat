@@ -33,9 +33,10 @@ test("wilox-community module registers cleanly in global registry bus", () => {
 
 	// Check rows
 	assert.ok(Array.isArray(mod.rows));
-	assert.ok(mod.rows.length >= 6);
+	assert.ok(mod.rows.length >= 7);
 
 	const ids = mod.rows.map((r) => r.id);
+	assert.ok(ids.includes("scanner-status"));
 	assert.ok(ids.includes("scanner-badge-name"));
 	assert.ok(ids.includes("scanner-comet"));
 	assert.ok(ids.includes("scanner-context"));
@@ -43,10 +44,27 @@ test("wilox-community module registers cleanly in global registry bus", () => {
 	assert.ok(ids.includes("scanner-compaction"));
 	assert.ok(ids.includes("scanner-zen"));
 
-	// Check label and preview formatting
+	// Check label and preview formatting under Option B Visual Badges
+	const statusRow = mod.rows.find((r) => r.id === "scanner-status")!;
+	assert.ok(statusRow.label().startsWith("Prompt Scanner: ["));
+	assert.equal(statusRow.preview().title, "Chat Scanner · Master Status");
+
 	const cometRow = mod.rows.find((r) => r.id === "scanner-comet")!;
-	assert.ok(cometRow.label().includes("Working Comet:"));
+	assert.ok(cometRow.label().startsWith("Working Comet: ["));
 	const preview = cometRow.preview();
 	assert.equal(preview.title, "Chat Scanner · Working Comet");
 	assert.ok(preview.sample.includes("[WORKING]"));
+});
+
+test("wilox-community module hides child rows when Prompt Scanner is OFF", () => {
+	const disabledConfig = { ...loadConfig(), enabled: false };
+
+	registerChatScannerModule(() => disabledConfig);
+
+	const bus = (globalThis as any)[COMMUNITY_REGISTRY_SLOT] as Map<string, WiloxCommunityModule>;
+	const mod = bus.get("chat-scanner")!;
+
+	assert.equal(mod.rows.length, 1, "Only the master status row should be visible when enabled is false");
+	assert.equal(mod.rows[0].id, "scanner-status");
+	assert.equal(mod.rows[0].label(), "Prompt Scanner: [OFF]");
 });

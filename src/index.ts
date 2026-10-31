@@ -15,14 +15,52 @@ export default function activate(pi: ExtensionAPI): void {
 	let currentEditor: ScannerWorkingEditor | null = null;
 	let sessionIsAgentActive = false;
 	let sessionWorkingStartTime: number | null = null;
+	let currentContext: any = null;
+
+	const setupEditor = (ctx: any) => {
+		if (!ctx?.hasUI || typeof ctx.ui?.setEditorComponent !== "function") {
+			return;
+		}
+
+		if (!config.enabled) {
+			if (currentEditor) {
+				currentEditor.dispose();
+				currentEditor = null;
+			}
+			try {
+				ctx.ui.setEditorComponent(undefined);
+				ctx.ui.setWorkingVisible(true);
+			} catch {}
+			return;
+		}
+
+		try {
+			ctx.ui.setEditorComponent((tui: any, theme: any, keybindings: any) => {
+				if (currentEditor) {
+					currentEditor.dispose();
+				}
+				currentEditor = new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
+				if (sessionIsAgentActive) {
+					currentEditor.setAgentActive(true, sessionWorkingStartTime ?? undefined);
+				}
+				return currentEditor;
+			});
+		} catch (err) {
+			console.error("[scanner-working-chat] Failed to install custom prompt editor:", err);
+		}
+	};
 
 	// Registrar y sincronizar en el bus global de Acordeón Modular de WiloxDev
 	try {
 		registerChatScannerModule(
 			() => config,
 			(newConfig) => {
+				const previousEnabled = config.enabled;
 				config = newConfig;
-				if (currentEditor) {
+				if (currentContext) {
+					setupEditor(currentContext);
+				}
+				if (currentEditor && previousEnabled === newConfig.enabled) {
 					currentEditor.config = { ...config };
 					currentEditor.updateBorderColor();
 					(currentEditor as any).tui?.requestRender();
@@ -142,16 +180,13 @@ export default function activate(pi: ExtensionAPI): void {
 	}
 
 	pi.on("session_start", (_event, ctx) => {
+		currentContext = ctx;
 		if (currentEditor) {
 			currentEditor.dispose();
 			currentEditor = null;
 		}
 		sessionIsAgentActive = false;
 		sessionWorkingStartTime = null;
-
-		if (!ctx?.hasUI || typeof ctx.ui?.setEditorComponent !== "function") {
-			return;
-		}
 
 		// Notify user if config had syntax or validation warnings
 		if (config.configValidationErrors && config.configValidationErrors.length > 0) {
@@ -163,20 +198,7 @@ export default function activate(pi: ExtensionAPI): void {
 			}
 		}
 
-		try {
-			ctx.ui.setEditorComponent((tui, theme, keybindings) => {
-				if (currentEditor) {
-					currentEditor.dispose();
-				}
-				currentEditor = new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
-				if (sessionIsAgentActive) {
-					currentEditor.setAgentActive(true, sessionWorkingStartTime ?? undefined);
-				}
-				return currentEditor;
-			});
-		} catch (err) {
-			console.error("[scanner-working-chat] Failed to install custom prompt editor:", err);
-		}
+		setupEditor(ctx);
 	});
 
 	pi.on("session_shutdown", () => {

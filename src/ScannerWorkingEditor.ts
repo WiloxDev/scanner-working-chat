@@ -212,7 +212,7 @@ export class ScannerWorkingEditor extends CustomEditor {
 	}
 
 	private syncAnimationTimer(): void {
-		const needsCustomTimer = (this.isAgentActive || this.transitionUntil !== null) && !this._workingIndicator;
+		const needsCustomTimer = this.isAgentActive || this.transitionUntil !== null;
 
 		if (needsCustomTimer && !this.animationTimer && !this.isDisposed) {
 			const intervalMs = Math.max(25, this.config.cometSpeedMs || 45);

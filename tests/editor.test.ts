@@ -223,9 +223,10 @@ test("editor: renders working border when agent is active even if working indica
 	editor.dispose();
 });
 
-test("editor: manages animation timer cleanly without leaking and avoids double timers", () => {
+test("editor: manages animation timer cleanly for comet animation", () => {
 	const config = loadConfig({
 		configPath: "/tmp/non-existent.json",
+		cometSpeedMs: 50,
 	});
 
 	let renderRequests = 0;
@@ -241,18 +242,25 @@ test("editor: manages animation timer cleanly without leaking and avoids double 
 
 	const editor = new ScannerWorkingEditor(tui, theme, keybindings, ctx, config);
 
-	// When indicator is present, native indicator manages animation timer -> editor internal timer stays null
+	// Timer should be NULL when agent is idle
+	assert.equal((editor as any).animationTimer, null, "Timer should be null when agent is idle");
+
+	// Agent becomes active -> timer STARTS (for comet/flower/duration/context animation)
+	editor.setAgentActive(true);
+	assert.notEqual((editor as any).animationTimer, null, "Timer should start when agent becomes active");
+
+	// Setting indicator should NOT stop the timer (comet needs it regardless)
 	editor.setWorkingStatusIndicator({
-		renderInBorder: () => "working…",
+		renderInBorder: () => "working...",
 		renderSpinnerInBorder: () => "",
 		setIndicator: () => {},
 	});
-	editor.setAgentActive(true);
-	assert.equal((editor as any).animationTimer, null, "Should not create duplicate timer when indicator is present");
+	assert.notEqual((editor as any).animationTimer, null, "Timer should persist when indicator is set");
 
-	// When indicator is cleared/null (Issue #1 scenario), internal animation timer activates
-	editor.setWorkingStatusIndicator(null);
-	assert.notEqual((editor as any).animationTimer, null, "Should activate internal timer when indicator is null");
+	// Agent settles -> timer STOPS after transition
+	editor.setAgentActive(false);
+	// Wait for transition (200ms) + small buffer
+	setTimeout(() => {}, 250);
 
 	// Dispose cleanly cleans up timer
 	editor.dispose();

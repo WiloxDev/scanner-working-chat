@@ -36,6 +36,40 @@ function createMockWorkingIndicator() {
 	};
 }
 
+test("working-top-border: bidirectional comet and flower repeat their configured full cycle", () => {
+	for (const trackWidth of [3, 10, 17]) {
+		const config = createMockConfig({
+			cometTrackWidth: trackWidth,
+			cometGlyphs: ["◆", "●", "·"],
+			cometSpeedMs: 45,
+			showWorkingIdentity: false,
+			showWorkingContext: false,
+			showWorkingDuration: false,
+		});
+		const passLength = trackWidth + config.cometGlyphs.length;
+		const cycleLength = 2 * passLength + trackWidth;
+		const render = (tick: number, extra = {}) => renderWorkingTopBorder({
+			width: 100, hiddenLineCount: 0, config, embedWorkingStatus: true,
+			workingIndicator: createMockWorkingIndicator(), ctx: undefined,
+			alertState: false, borderColor: (text: string) => text,
+			workingStartTime: 1000, currentTimestamp: 1000 + tick * config.cometSpeedMs,
+			...extra,
+		});
+		for (let tick = 0; tick < cycleLength; tick++) {
+			const frame = render(tick);
+			const clean = stripTerminalSequences(frame);
+			const head = tick < passLength ? tick : trackWidth - 1 - (tick - passLength);
+			assert.equal(clean.indexOf("◆"), head >= 0 && head < trackWidth ? 3 + head : -1);
+			// Compare the flower including ANSI color/bold, not the independent text scan.
+			const flower = (value: string) => value.match(/\x1b\[[0-9;]*m[✿❀❁✾]\x1b\[0m/)?.[0];
+			assert.ok(flower(frame));
+			assert.equal(flower(frame), flower(render(tick + cycleLength)));
+		}
+		assert.equal(render(0, { isWaiting: true }), render(cycleLength, { isWaiting: true }));
+		assert.ok(!stripTerminalSequences(render(1, { isWaiting: true })).includes("◆"));
+	}
+});
+
 test("working-top-border: sequence is contiguous: identity -> action -> duration -> compaction -> context", () => {
 	const config = createMockConfig({
 		enableComet: true,
@@ -120,7 +154,7 @@ test("working-top-border: shows comet when enabled", () => {
 
 	const clean = stripTerminalSequences(result);
 	// Comet glyphs should be present
-	assert.ok(clean.includes("◆") || clean.includes("●") || clean.includes("•"), `Should contain comet particles: ${clean}`);
+	assert.ok(config.cometGlyphs.some((glyph) => clean.includes(glyph)), `Should contain comet particles: ${clean}`);
 });
 
 test("working-top-border: hides context mirror when showWorkingContext is false", () => {

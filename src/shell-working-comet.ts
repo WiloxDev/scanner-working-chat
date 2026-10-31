@@ -7,29 +7,27 @@ export interface CometConfig {
 	colors: readonly Rgb[];
 	trackWidth: number;
 	frameMs: number;
-	direction?: "ltr" | "rtl";
+	direction?: "ltr" | "rtl" | "alternate";
 }
 
 export const DEFAULT_COMET_CONFIG: CometConfig = {
-	glyphs: ["◆", "●", "•", "∙", "·"] as const,
+	glyphs: ["▪", "▪", "▪", "▪", "▪"],
 	colors: [
-		[92, 184, 199], // ◆ #5CB8C7 Pastel Cyan (Core Glow)
-		[78, 160, 178], // ● Pastel Soft Cyan
-		[64, 135, 155], // • Pastel Ocean
-		[48, 105, 125], // ∙ Pastel Slate
-		[32, 75, 95],   // · Midnight Pastel
-	] as const,
+		[92, 184, 199],
+		[78, 160, 178],
+		[64, 135, 155],
+		[48, 105, 125],
+		[32, 75, 95],
+	],
 	trackWidth: 10,
 	frameMs: 45,
-	direction: "ltr",
+	direction: "alternate",
 };
 
 const RESET_FG = "\x1b[39m";
 
 function ansiRgb(text: string, [r, g, b]: Rgb, enabled: boolean): string {
-	if (!enabled || process.env.NO_COLOR !== undefined) {
-		return text;
-	}
+	if (!enabled || process.env.NO_COLOR !== undefined) return text;
 	return `\x1b[38;2;${r};${g};${b}m${text}${RESET_FG}`;
 }
 
@@ -40,6 +38,12 @@ export interface WorkingCometRenderOptions {
 	config?: Partial<CometConfig>;
 }
 
+export function workingCometCycleLength(width: number, glyphCount: number, direction: CometConfig["direction"] = "alternate"): number {
+	const trackWidth = Math.max(0, Math.floor(width));
+	const passLength = trackWidth + glyphCount;
+	return Math.max(1, direction === "alternate" ? 2 * passLength + trackWidth : passLength);
+}
+
 export function renderWorkingComet({
 	tick,
 	width = DEFAULT_COMET_CONFIG.trackWidth,
@@ -48,63 +52,31 @@ export function renderWorkingComet({
 }: WorkingCometRenderOptions): string {
 	const glyphs = config.glyphs ?? DEFAULT_COMET_CONFIG.glyphs;
 	const colors = config.colors ?? DEFAULT_COMET_CONFIG.colors;
-	const direction = config.direction ?? DEFAULT_COMET_CONFIG.direction ?? "ltr";
+	const direction = config.direction ?? DEFAULT_COMET_CONFIG.direction ?? "alternate";
 	const trackWidth = Math.max(0, Math.floor(width ?? config.trackWidth ?? DEFAULT_COMET_CONFIG.trackWidth));
+	if (trackWidth === 0) return "";
 
-	if (trackWidth === 0) {
-		return "";
-	}
+	const trackColor = colors[colors.length - 1] ?? [32, 75, 95];
+	const cells = Array<string>(trackWidth).fill(ansiRgb(".", trackColor, color));
+	const passLength = trackWidth + glyphs.length;
+	const cycleLength = workingCometCycleLength(trackWidth, glyphs.length, direction);
+	const phase = ((Math.floor(tick) % cycleLength) + cycleLength) % cycleLength;
+	const movingLeft = direction === "rtl" || (direction === "alternate" && phase >= passLength);
+	const passPhase = direction === "alternate" && movingLeft ? phase - passLength : phase;
+	const headX = movingLeft ? trackWidth - 1 - passPhase : passPhase;
 
-	const cells = Array<string>(trackWidth).fill(" ");
-	const cometLength = glyphs.length;
-	const cycleLength = trackWidth + cometLength;
-	const phase = ((tick % cycleLength) + cycleLength) % cycleLength;
-
-	if (direction === "rtl") {
-		// Head spawns at the far right edge of the track and advances left.
-		const headX = trackWidth - 1 - phase;
-		for (let tailIndex = 0; tailIndex < cometLength; tailIndex += 1) {
-			const x = headX + tailIndex;
-			if (x < 0 || x >= trackWidth) {
-				continue;
-			}
-			cells[x] = ansiRgb(
-				glyphs[tailIndex],
-				colors[tailIndex] ?? colors[colors.length - 1],
-				color,
-			);
-		}
-	} else {
-		// Natural LTR: Head moves forward from left to right, trailing the fading tail behind it.
-		// On tick 0, head enters at position 0.
-		const headX = phase;
-		for (let tailIndex = 0; tailIndex < cometLength; tailIndex += 1) {
-			const x = headX - tailIndex;
-			if (x < 0 || x >= trackWidth) {
-				continue;
-			}
-			cells[x] = ansiRgb(
-				glyphs[tailIndex],
-				colors[tailIndex] ?? colors[colors.length - 1],
-				color,
-			);
-		}
+	// After both passes the head and tail are outside the track: only dim dots remain.
+	for (let tailIndex = 0; tailIndex < glyphs.length; tailIndex += 1) {
+		const x = headX + (movingLeft ? tailIndex : -tailIndex);
+		if (x < 0 || x >= trackWidth) continue;
+		cells[x] = ansiRgb(glyphs[tailIndex], colors[tailIndex] ?? trackColor, color);
 	}
 
 	const rendered = cells.join("");
-
-	// Invariant: track always maintains the exact expected visible width.
-	if (visibleWidth(rendered) !== trackWidth) {
-		return " ".repeat(trackWidth);
-	}
-
-	return rendered;
+	return visibleWidth(rendered) === trackWidth ? rendered : " ".repeat(trackWidth);
 }
 
 export function isWorkingCometEnabled(): boolean {
 	const env = process.env.GENTLE_PI_WORKING_COMET?.trim().toLowerCase();
-	if (env === "0" || env === "false" || env === "off") {
-		return false;
-	}
-	return true;
+	return env !== "0" && env !== "false" && env !== "off";
 }

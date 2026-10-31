@@ -55,6 +55,58 @@ test("comet: custom glyphs and colors are respected", () => {
 	assert.equal(visibleWidth(rendered), 10, "Track width must match with custom config");
 });
 
+test("comet: reference cycle traverses both directions, preserves dots and pauses", () => {
+	for (const width of [1, 3, 10, 22]) {
+		const glyphs = ["H", "t", "s"];
+		const passLength = width + glyphs.length;
+		const cycleLength = 2 * passLength + width;
+		for (let tick = 0; tick < cycleLength; tick++) {
+			const frame = renderWorkingComet({ tick, width, color: false, config: { glyphs } });
+			const head = tick < passLength ? tick : width - 1 - (tick - passLength);
+			assert.equal(frame.indexOf("H"), head >= 0 && head < width ? head : -1);
+			assert.equal(frame.length, width);
+			assert.ok(!frame.includes(" "), "dim track must persist outside the comet");
+			assert.equal(frame, renderWorkingComet({ tick: tick + cycleLength, width, color: false, config: { glyphs } }));
+			if (tick >= 2 * passLength) assert.equal(frame, ".".repeat(width));
+		}
+		assert.equal(renderWorkingComet({ tick: 1, width: 3, color: false, config: { glyphs } }), "tH.");
+		assert.equal(renderWorkingComet({ tick: 7, width: 3, color: false, config: { glyphs } }), ".Ht");
+	}
+});
+
+test("comet: explicit left-to-right direction remains supported", () => {
+	for (let tick = 0; tick < 10; tick++) {
+		const frame = renderWorkingComet({ tick, width: 10, color: false, config: { direction: "ltr", glyphs: ["H", "t"] } });
+		assert.equal(frame.indexOf("H"), tick);
+	}
+});
+
+test("comet: negative ticks wrap and explicit right-to-left remains supported", () => {
+	const config = { direction: "rtl" as const, glyphs: ["H", "t"] };
+	for (let tick = 0; tick < 10; tick++) {
+		assert.equal(renderWorkingComet({ tick, width: 10, color: false, config }).indexOf("H"), 9 - tick);
+	}
+	assert.equal(
+		renderWorkingComet({ tick: -1, width: 10, color: false }),
+		renderWorkingComet({ tick: 39, width: 10, color: false }),
+	);
+});
+
+test("comet: head, tail and persistent track use descending configured brightness", () => {
+	const original = process.env.NO_COLOR;
+	try {
+		delete process.env.NO_COLOR;
+		const frame = renderWorkingComet({ tick: 2, width: 10 });
+		for (const [r, g, b] of DEFAULT_COMET_CONFIG.colors.slice(0, 3)) {
+			assert.ok(frame.includes(`\x1b[38;2;${r};${g};${b}m▪`));
+		}
+		assert.ok(frame.includes("\x1b[38;2;32;75;95m."));
+	} finally {
+		if (original === undefined) delete process.env.NO_COLOR;
+		else process.env.NO_COLOR = original;
+	}
+});
+
 test("comet: zero width returns empty string", () => {
 	assert.equal(renderWorkingComet({ tick: 5, width: 0 }), "");
 });

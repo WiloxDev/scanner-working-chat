@@ -32,7 +32,7 @@ export const UNICODE_PROFILE: TerminalProfile = {
 	recommendedUserIcon: "●",
 	recommendedFlowerIcon: "✿",
 	recommendedCompactionIcon: "📦",
-	recommendedCometGlyphs: ["◆", "●", "•", "∙", "·"],
+	recommendedCometGlyphs: ["▪", "▪", "▪", "▪", "▪"],
 	recommendedGaugeFull: "▰",
 	recommendedGaugeEmpty: "▱",
 };
@@ -43,7 +43,7 @@ export const NERD_FONT_PROFILE: TerminalProfile = {
 	recommendedUserIcon: "󰣇",
 	recommendedFlowerIcon: "✿",
 	recommendedCompactionIcon: "📦",
-	recommendedCometGlyphs: ["◆", "●", "•", "∙", "·"],
+	recommendedCometGlyphs: ["▪", "▪", "▪", "▪", "▪"],
 	recommendedGaugeFull: "▰",
 	recommendedGaugeEmpty: "▱",
 };

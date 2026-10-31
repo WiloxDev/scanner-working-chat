@@ -22,18 +22,18 @@ import { type ScannerChatConfig, DEFAULT_CONFIG } from "./config.js";
 
 const FLOWER_FRAMES = ["✿", "❀", "❁", "✾"] as const;
 
-export function renderSyncFlower(tick: number, baseFlower = "✿", baseColor: [number, number, number] = [92, 184, 199]): string {
-	const cycleLength = 15;
-	const phase = ((tick % cycleLength) + cycleLength) % cycleLength;
-	const t = Math.min(1, phase / 6);
+export function renderSyncFlower(tick: number, baseFlower = "✿", baseColor: [number, number, number] = [92, 184, 199], cycleLength = 15): string {
+	const period = Math.max(1, cycleLength);
+	const phase = ((tick % period) + period) % period;
+	const t = Math.min(1, phase / (period * 0.4));
 	const r = Math.round(baseColor[0] + (35 - baseColor[0]) * t);
 	const g = Math.round(baseColor[1] + (75 - baseColor[1]) * t);
 	const b = Math.round(baseColor[2] + (95 - baseColor[2]) * t);
-	const bold = phase <= 2 ? "1;" : "";
+	const bold = phase / period <= 2 / 15 ? "1;" : "";
 
 	let glyph = baseFlower;
 	if (baseFlower === "✿") {
-		glyph = FLOWER_FRAMES[Math.floor(tick / 2) % FLOWER_FRAMES.length];
+		glyph = FLOWER_FRAMES[Math.floor(phase / period * FLOWER_FRAMES.length)];
 	}
 	return `\x1b[${bold}38;2;${r};${g};${b}m${glyph}\x1b[0m`;
 }

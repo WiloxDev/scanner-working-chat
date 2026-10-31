@@ -1,6 +1,6 @@
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { cleanStatusLabel } from "./ScannerWorkingEditor.js";
-import { isWorkingCometEnabled, renderWorkingComet } from "./shell-working-comet.js";
+import { isWorkingCometEnabled, renderWorkingComet, workingCometCycleLength } from "./shell-working-comet.js";
 import { renderPromptContextMirror, type ContextMirrorTier } from "./shell-prompt-context-mirror.js";
 import { renderSyncFlower, scanWorkingText } from "./ScannerWorkingEditor.js";
 import type { ScannerChatConfig } from "./config.js";
@@ -60,6 +60,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 	if (width <= 0) return "";
 
 	const wsi = workingIndicator;
+	const cycleLength = workingCometCycleLength(config.cometTrackWidth, config.cometGlyphs.length);
 	let status = "";
 
 	const rawStatus =
@@ -136,7 +137,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 			// If Zen mode, static flower; else animated flower
 			const flower = config.zenMode
 				? `\x1b[38;2;${config.colors.flowerColor[0]};${config.colors.flowerColor[1]};${config.colors.flowerColor[2]}m${config.flowerIcon}\x1b[0m`
-				: renderSyncFlower(tick, config.flowerIcon, config.colors.flowerColor);
+				: renderSyncFlower(tick, config.flowerIcon, config.colors.flowerColor, cycleLength);
 
 			// Text scan effect or static text in Zen mode
 			const label = cleanStatusLabel(rawStatus);
@@ -210,6 +211,7 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 				config.zenMode ? 0 : Math.floor(Math.max(0, currentTimestamp - (workingStartTime || 0)) / Math.max(10, config.cometSpeedMs || 80)),
 				config.flowerIcon,
 				config.colors.flowerColor,
+				cycleLength,
 			);
 
 	if (overflowLabel && !canFitOverflow()) {

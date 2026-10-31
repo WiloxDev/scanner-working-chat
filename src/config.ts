@@ -78,7 +78,7 @@ export function resolveDefaultUsername(): string {
 	return (process.env.USER || process.env.USERNAME || "user").trim();
 }
 
-export const DEFAULT_COMET_GLYPHS = ["◆", "●", "•", "∙", "·"] as const;
+export const DEFAULT_COMET_GLYPHS = ["▪", "▪", "▪", "▪", "▪"] as const;
 export const DEFAULT_COMET_COLORS: readonly [number, number, number][] = [
 	[92, 184, 199], // ◆ #5CB8C7 Pastel Cyan
 	[78, 160, 178], // ● Pastel Soft Cyan

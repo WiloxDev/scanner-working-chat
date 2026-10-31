@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { renderWorkingTopBorder } from "../src/shell-working-top-border.ts";
 import { loadConfig, DEFAULT_CONFIG } from "../src/config.ts";
+import { scanWorkingText } from "../src/ScannerWorkingEditor.ts";
 
 function createBorderColor(config: typeof DEFAULT_CONFIG) {
 	const [br, bg, bb] = config.colors.borderColor;
@@ -67,6 +68,23 @@ test("working-top-border: bidirectional comet and flower repeat their configured
 		}
 		assert.equal(render(0, { isWaiting: true }), render(cycleLength, { isWaiting: true }));
 		assert.ok(!stripTerminalSequences(render(1, { isWaiting: true })).includes("◆"));
+	}
+});
+
+test("working-top-border: text scan keeps its 100ms speed independently of the comet", () => {
+	const render = (cometSpeedMs: number, elapsed: number) => renderWorkingTopBorder({
+		width: 100, hiddenLineCount: 0,
+		config: createMockConfig({ cometSpeedMs, showWorkingIdentity: false, showWorkingContext: false, showWorkingDuration: false }),
+		embedWorkingStatus: true, workingIndicator: createMockWorkingIndicator(), ctx: undefined,
+		alertState: false, borderColor: (text: string) => text,
+		workingStartTime: 1000, currentTimestamp: 1000 + elapsed,
+	});
+	assert.notEqual(render(45, 90), render(45, 0), "comet advances before 100ms");
+	for (const speed of [45, 80]) {
+		for (const elapsed of [90, 100, 250]) {
+			assert.ok(render(speed, elapsed).includes(scanWorkingText("working…", Math.floor(elapsed / 100))),
+				`text should use a 100ms tick at ${elapsed}ms with comet speed ${speed}ms`);
+		}
 	}
 });
 

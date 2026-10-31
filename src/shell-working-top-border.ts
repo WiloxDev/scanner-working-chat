@@ -141,7 +141,8 @@ export function renderWorkingTopBorder(options: WorkingTopBorderOptions): string
 
 			// Text scan effect or static text in Zen mode
 			const label = cleanStatusLabel(rawStatus);
-			const scannedText = config.zenMode ? label : scanWorkingText(label, tick);
+			const textTick = options.isWaiting ? 0 : Math.floor(elapsedMs / 100);
+			const scannedText = config.zenMode ? label : scanWorkingText(label, textTick);
 
 			const [sr, sg, sb] = config.colors.separatorColor;
 			const SEPARATOR = ` \x1b[38;2;${sr};${sg};${sb}m│\x1b[0m `;

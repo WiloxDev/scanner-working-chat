@@ -1,3 +1,16 @@
+## 🚀 Instalación Canónica (Gentle-Shell)
+
+### Opción 1: Con el gestor nativo de Pi
+`ash
+pi install WiloxDev/scanner-working-chat
+`
+
+### Opción 2: Instalador local para Gentle-Shell
+`ash
+./install.sh
+`
+
+---
 # 🌸 Scanner Working Chat (`scanner-working-chat`)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)

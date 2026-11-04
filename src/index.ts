@@ -101,6 +101,18 @@ export default function activate(pi: ExtensionAPI): void {
 			handler: async (args: string, ctx: any) => {
 				const sub = (args || "").trim().toLowerCase();
 
+				if (sub === "doctor") {
+					const isCustomActive = Boolean(currentEditor);
+					const diag = "🩺 [Scanner Doctor - Gentle-Shell]\n" +
+						"• Editor cinético: " + (isCustomActive ? "Activo (ScannerWorkingEditor)" : "Inactivo / Fallback") + "\n" +
+						"• Modo: " + (config.zenMode ? "Zen (Animaciones pausadas, 0% CPU)" : "Dinámico (Cometa cinético 45ms)") + "\n" +
+						"• Usuario badge: " + config.username + "\n" +
+						"• Context Gauge: " + (config.showWorkingContext ? "Visible" : "Oculto") + "\n" +
+						"• Almacén: ~/.config/wiloxdev/settings.json";
+					ctx?.ui?.notify?.(diag, "info");
+					return diag;
+				}
+
 				if (sub === "zen" || sub === "toggle") {
 					config.zenMode = !config.zenMode;
 					if (currentEditor) {
@@ -211,7 +223,7 @@ export default function activate(pi: ExtensionAPI): void {
 					"  /scanner ctx            - Ocultar o mostrar medidor de contexto (Ctx / Context [■■□□])\n" +
 					"  /scanner time           - Ocultar o mostrar badge de tiempo transcurrido [3.4s]\n" +
 					"  /scanner comp           - Ocultar o mostrar contador de compactaciones 󰁨×n\n" +
-					"  /scanner zen            - Alternar Zen Mode (pausar o reanudar cometa y animaciones)\n" +
+					"  /scanner doctor         - Diagnóstico de estado en vivo para Gentle-Shell\n  /scanner zen            - Alternar Zen Mode (pausar o reanudar cometa y animaciones)\n" +
 					"  /scanner reload         - Recargar ~/.scanner-chatrc.json sin reiniciar Pi";
 			},
 		});

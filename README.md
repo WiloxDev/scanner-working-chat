@@ -101,7 +101,7 @@ curl -fsSL https://raw.githubusercontent.com/WiloxDev/scanner-working-chat/main/
 
 **¿Qué hace este comando automáticamente por ti?**
 1. Detecta tu nombre de usuario del sistema (no te pondrá nombres ajenos).
-2. Detecta la ruta correcta de Pi (`Gentle-Pi` estándar o `Gentle-Shell` con perfiles como `agent-j0k3r`).
+2. Detecta la ruta correcta de Pi (`Gentle-Pi` estándar o `Gentle-Shell` con perfiles como `perfiles personalizados`).
 3. Descarga el código, instala y compila la versión más rápida y optimizada.
 4. Genera tu archivo personal de configuración en `~/.scanner-chatrc.json`.
 

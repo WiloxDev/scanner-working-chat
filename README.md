@@ -20,7 +20,7 @@ pi install WiloxDev/scanner-working-chat
   <p><b>Indicador de working para chat en trabajos continuos: Cometa Working, cantidad de compactación, Time y contexto de alerta guiado por colorimetría y porcentaje.</b></p>
 
 [![Gentle Hub](https://img.shields.io/badge/Gentle%20Hub-Extension-F095C8)](https://gentlemanprogramming.com/gentle-hub/)
-[![Discord](https://img.shields.io/badge/Discord-Apoyo-5865F2?logo=discord&logoColor=white)](https://bit.ly/48zTJUo)
+[![Discord](https://img.shields.io/badge/Discord-Feedback%20%26%20Sugerencias-5865F2?logo=discord&logoColor=white)](https://bit.ly/48zTJUo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/Tests-43%20passing-brightgreen.svg)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%200%20errors-blue.svg)]()
@@ -28,7 +28,7 @@ pi install WiloxDev/scanner-working-chat
 
 </div>
 
-> 💬 **Comunidad y Soporte Oficial:** `wilox2` · [Servidor de Discord](https://bit.ly/48zTJUo)
+> 💬 **Feedback & Sugerencias:** `wilox2` · [Servidor de Discord](https://bit.ly/48zTJUo)
 
 ---
 

@@ -1,5 +1,7 @@
 ## 🚀 Instalación Canónica (Gentle-Shell)
 
+> 🤖 **Para Instalación Asistida por AI (Claude, Pi, Cursor):** Consulta estrictamente [AI_INSTALL.md](AI_INSTALL.md). Este paquete es un **Custom Prompt Editor**, NO es una tarjeta de sidebar ni widget de chat.
+
 ### Opción 1: Con el gestor nativo de Pi
 `ash
 pi install WiloxDev/scanner-working-chat

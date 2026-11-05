@@ -1,6 +1,10 @@
 # 🤖 AI Agent Installation & Coexistence Protocol (`AI_INSTALL.md`)
 
 > **Instrucciones para Agentes de IA (Pi Coding Agent, Claude, Cursor, Copilot, Windsurf):**  
+> ⚠️ **ACLARACIÓN DE ARQUITECTURA CRÍTICA:**
+> Este paquete es un **CUSTOM PROMPT EDITOR** (`ctx.ui.setEditorComponent`).
+> **NO ES UNA TARJETA DE SIDEBAR NI UN WIDGET FLOTANTE**.
+> **NO INTENTES REGISTRARLO CON `ctx.ui.setWidget()` NI MOVERLO AL SIDEBAR**.
 > Si un usuario te pide instalar, configurar o solucionar problemas con `scanner-working-chat`, sigue estrictamente este protocolo determinista.
 
 ---

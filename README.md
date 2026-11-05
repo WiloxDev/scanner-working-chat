@@ -11,15 +11,18 @@ pi install WiloxDev/scanner-working-chat
 `
 
 ---
-# 🌸 Scanner Working Chat (`scanner-working-chat`)
+
+<div align="center">
+  <img src="docs/assets/logo.png" alt="Scanner Working Chat Logo" width="160" />
+  <h1>🌸 Scanner Working Chat</h1>
+  <p><b>Indicador de working para chat en trabajos continuos: Cometa Working, cantidad de compactación, Time y contexto de alerta guiado por colorimetría y porcentaje.</b></p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/Tests-43%20passing-brightgreen.svg)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%200%20errors-blue.svg)]()
 [![Gentle-Pi Compatible](https://img.shields.io/badge/Gentle--Pi-v0.87.1%2B-purple.svg)]()
 
-> **Dynamic Kinetic Telemetry & Real-Time Context Engine para Gentle-Pi y Gentle-Shell.**  
-> Transforma el recuadro estático y aburrido del chat de Pi en un centro interactivo de telemetría: animación cinemática de cometa, cronómetro de latencia por turno, medidor espectral de consumo de contexto y protección inteligente contra pérdida de memoria.
+</div>
 
 ---
 
